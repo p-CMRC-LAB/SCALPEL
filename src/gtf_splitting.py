@@ -2,7 +2,6 @@
 
 #libs
 import os
-import vaex as vx
 import pyranges as pr
 import pandas as pd
 import argparse

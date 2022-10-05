@@ -489,6 +489,7 @@ process DGE_generation{
 process outputSAM_filtering{
 	tag "${bam}"
 	input:
+	val seqtype			from params.sequencing
 	val samtoolbin		from params.samtools_bin
 	file fragment 		from readid_filtered_ch
 	file bam 	  		from exonic_bams_ch2.collect()
@@ -504,7 +505,7 @@ process outputSAM_filtering{
 	${samtoolbin} view ${fragment.baseName}.bamf > ${fragment.baseName}.sam
 
 	# 3- Filter reads present in the fragment file into the sam file
-	python3 ${baseDir}/src/sam_filtering.py ${fragment.baseName}.sam ${fragment} ${fragment.baseName}.sam_reads
+	python3 ${baseDir}/src/sam_filtering.py ${fragment.baseName}.sam ${fragment} ${seqtype} ${fragment.baseName}.sam_reads
 
 	# 3b - Merge header and reads
 	cat ${fragment.baseName}.sam_reads >> ${fragment.baseName}.samh

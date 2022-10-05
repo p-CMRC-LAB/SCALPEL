@@ -1,0 +1,16 @@
+r-matrix
+r-hdf5r
+r-tidyr
+r-dplyr
+dask
+pyarrow
+bedtools
+bedops
+ipython
+nextflow
+samtools=1.14
+r-argparse
+pyranges
+salmon
+r-data.table
+r-ggplot2
