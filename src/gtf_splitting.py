@@ -9,6 +9,8 @@ import argparse
 import numpy as np
 from IPython.display import display
 
+
+
 #Argunent Parser
 #**************
 parser = argparse.ArgumentParser(description='Processing of GTF file')
@@ -16,7 +18,13 @@ parser.add_argument('gtf_file', metavar='GTF_file_input', type=str, help='path o
 parser.add_argument('quant_file', metavar='quant_file_input', type=str, help='path of transcript quantification file by salmon')
 args = parser.parse_args()
 
+
+
 QF_FLAG = True
+
+
+
+
 
 gtf = pr.read_gtf(args.gtf_file, as_df=True)
 

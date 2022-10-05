@@ -21,7 +21,7 @@ args = parser.parse_args()
 if args.seq_type == 'dropseq':
 	coltypes={'read_id':'category','str_rd':'int8','chr_rd':'category','coord':'int64','mq':'category','cigar':'category','c6':'category','c7':'category','c8':'category','read_seq':'str','read_qual':'str','BC':'category','UMI':'category','gfunc_rd':'category'}
 elif args.seq_type == 'chromium':
-	coltypes={'read_id':'category','str_rd':'int8','chr_rd':'category','coord':'int64','mq':'category','cigar':'category','c6':'category','c7':'category','c8':'category','read_seq':'str','read_qual':'str','BC':'category','UMI':'category','gstrand_rd':'category'}
+	coltypes={'read_id':'category','str_rd':'int8','chr_rd':'category','coord':'int64','mq':'category','cigar':'category','c6':'category','c7':'category','c8':'category','read_seq':'str','read_qual':'str','BC':'category','UMI':'category'}
 else:
 	exit('seq_type tag error in bam_filtering.py')
 
@@ -45,6 +45,7 @@ for colidx, col in enumerate(exonics.loc[0,tags_start:]):
 
 #names the default bam columns and categorization
 exonics = exonics.rename(columns = {0:'read_id', 1:'str_rd', 2:'chr_rd', 3:'coord', 4:'mq', 5:'cigar', 6:'c6', 7:'c7', 8:'c8', 9:'read_seq', 10:'read_qual'})
+display(exonics)
 exonics = exonics.astype(coltypes)
 
 #name intronics and categorization
@@ -75,15 +76,17 @@ if args.seq_type == 'dropseq':
 	#re add sequencing tags
 	exonics['gfunc_rd'] = 'gf:Z:' + exonics['gfunc_rd']
 	exonics['gstrand_rd'] = 'gs:Z:' + exonics['gstrand_rd']
-	#filter out intronics associated BC/UMI
-	exonics['frag_id'] = exonics['BC'].astype(str) + '***' + exonics['UMI'].astype(str)
-	trs_todisc = intronics['in']['BC'].astype(str) + '***' + intronics['in']['UMI'].astype(str)
-	intronics.clear()
-	exonics = exonics[~exonics.frag_id.isin(trs_todisc)]
-	del exonics['index_rd']
-	del exonics['frag_id']
 	del exonics['gfunc_rd']
 	del exonics['gstrand_rd']
+	del exonics['index_rd']
 
-	#write file
-	exonics.to_csv(args.output_file, sep="\t", header=None, index=False)
+
+#filter out intronics associated BC/UMI
+exonics['frag_id'] = exonics['BC'].astype(str) + '***' + exonics['UMI'].astype(str)
+trs_todisc = intronics['in']['BC'].astype(str) + '***' + intronics['in']['UMI'].astype(str)
+intronics.clear()
+exonics = exonics[~exonics.frag_id.isin(trs_todisc)]
+del exonics['frag_id']
+
+#write file
+exonics.to_csv(args.output_file, sep="\t", header=None, index=False)
