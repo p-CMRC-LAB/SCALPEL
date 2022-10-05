@@ -21,6 +21,10 @@ args = parser.parse_args()
 coltypes = {'chr_rd':'category', 'start_rd':'int64','end_rd':'int64','read_id':'str','str_rd':'category','bc':'category','umi':'category'}
 reads = pd.read_csv(args.bed, sep='\t', names = ['chr_rd','start_rd','end_rd','read_id','mq','str_rd','c6','c7','c8','c9','c10','c11','c12','bc','umi'], dtype = coltypes, usecols = ['chr_rd','start_rd','end_rd','read_id','str_rd','bc','umi'])
 
+#optional (remove chr)
+reads.chr_rd = reads.chr_rd.str.replace('chr','')
+
+
 #delete seq tags of barcodes, umis
 #dropseq
 reads.bc = reads.bc.str.replace('XC:Z:','')

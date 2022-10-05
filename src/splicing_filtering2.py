@@ -69,36 +69,45 @@ save1 = spliceds
 #check consecutivity of spliced reads on each transcript for each fragments
 print('check consecutivity...')
 spliceds_check = (pd.DataFrame([tabs[0][0], tabs[0][1], tabs[0][2], 'splicing_validated']  if checking(tabs[1]) else [tabs[0][0], tabs[0][1], tabs[0][2], 'uncoherent_splicing'] for tabs in grouped))
-spliceds_check.columns = ['frag_id','read_id','trs','splicing_check']
-uncoherent_splicing = spliceds_check[spliceds_check.splicing_check=='uncoherent_splicing']
-spliceds_check = spliceds_check[spliceds_check.splicing_check=='splicing_validated']
-to_remove = uncoherent_splicing.frag_id + '-' + uncoherent_splicing.trs
 
-#filter validated spliceds into spliceds
-to_keep = spliceds_check.frag_id + '-' + spliceds_check.read_id + '-' + spliceds_check.trs
-spliceds = spliceds[spliceds.infilter.isin(to_keep)]
+if len(spliceds_check) != 0:
+	spliceds_check.columns = ['frag_id','read_id','trs','splicing_check']
+	uncoherent_splicing = spliceds_check[spliceds_check.splicing_check=='uncoherent_splicing']
+	spliceds_check = spliceds_check[spliceds_check.splicing_check=='splicing_validated']
+	to_remove = uncoherent_splicing.frag_id + '-' + uncoherent_splicing.trs
 
-#check coordinates bordering of spliced reads
-spliceds = spliceds.astype({'frag_id':'object','transcript_name':'object'})
-uncoherent_bordering = spliceds[(spliceds.start_rd!=spliceds.Start) & (spliceds.end_rd!=spliceds.End)]
-to_remove_bordering = uncoherent_bordering.frag_id + '-' + uncoherent_bordering.transcript_name
-spliceds['infilter'] = spliceds.frag_id + '-' + spliceds.transcript_name
-spliceds = spliceds[~spliceds.infilter.isin(to_remove_bordering)]
-# del spliceds['infilter']
+	#filter validated spliceds into spliceds
+	to_keep = spliceds_check.frag_id + '-' + spliceds_check.read_id + '-' + spliceds_check.trs
+	spliceds = spliceds[spliceds.infilter.isin(to_keep)]
 
-#filter unspurious transcripts mapping into unspliceds
-unspliceds = unspliceds.astype({'frag_id':'object','read_id':'object'})
-unspliceds['infilter'] = unspliceds.frag_id + '-' + unspliceds.transcript_name
-to_keep = spliceds_check.frag_id + '-' + spliceds_check.trs
+	#check coordinates bordering of spliced reads
+	spliceds = spliceds.astype({'frag_id':'object','transcript_name':'object'})
+	uncoherent_bordering = spliceds[(spliceds.start_rd!=spliceds.Start) & (spliceds.end_rd!=spliceds.End)]
+	to_remove_bordering = uncoherent_bordering.frag_id + '-' + uncoherent_bordering.transcript_name
+	spliceds['infilter'] = spliceds.frag_id + '-' + spliceds.transcript_name
+	spliceds = spliceds[~spliceds.infilter.isin(to_remove_bordering)]
+	# del spliceds['infilter']
 
-#get from unspliced reads all the fragments not associated with spliced reads
-unspliceds_independant = unspliceds[~unspliceds.frag_id.isin(save1.frag_id)]
-#get from unspliceds reads all the fragments associated with spliced reads validated
-unspliceds_connected = unspliceds[unspliceds.infilter.isin(spliceds.infilter)]
+	#filter unspurious transcripts mapping into unspliceds
+	unspliceds = unspliceds.astype({'frag_id':'object','read_id':'object'})
+	unspliceds['infilter'] = unspliceds.frag_id + '-' + unspliceds.transcript_name
+	to_keep = spliceds_check.frag_id + '-' + spliceds_check.trs
 
-#merge spliceds and unspliceds
-reads = pd.concat([unspliceds_independant, unspliceds_connected, spliceds])
-del reads['infilter']
+	#get from unspliced reads all the fragments not associated with spliced reads
+	unspliceds_independant = unspliceds[~unspliceds.frag_id.isin(save1.frag_id)]
+	#get from unspliceds reads all the fragments associated with spliced reads validated
+	unspliceds_connected = unspliceds[unspliceds.infilter.isin(spliceds.infilter)]
+
+	#merge spliceds and unspliceds
+	reads = pd.concat([unspliceds_independant, unspliceds_connected, spliceds])
+	del reads['infilter']
+
+else:
+	#get from unspliced reads all the fragments not associated with spliced reads
+	unspliceds_independant = unspliceds[~unspliceds.frag_id.isin(save1.frag_id)]
+	reads = unspliceds_independant
+
+
 
 
 #filter unbalanced frag_id number by transcript

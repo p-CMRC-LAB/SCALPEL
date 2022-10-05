@@ -35,74 +35,64 @@
 //*********************
 
 /*publish repository path*/
-params.publish_rep = "$PWD/RESULTS/"
+params.publish_rep = "$PWD/scalpel_results/"
 
 /*progs*/
 params.samtools_bin = 'samtools'
 params.rbin = 'Rscript'
 params.python_bin = 'python3'
 params.bedmap_bin = 'bedmap'
+params.chr_concordance = ''
 params.mapq = 10
+params.barcodes = 'null'
 
 /*Some params initilialization*/
-params.dt_threshold = 500
+params.dt_threshold = 750
 params.dt_exon_end_threshold = 30
 params.cpu_defined = 50
 params.mt_remove = 1
 params.fraction_read_overlapping = 2
-params.barcodes = 'null'
-params.quant_file = 'null'
+params.subsampling = 1
+params.gene_fraction = "90%"
+params.binsize = 25
 
-/* Input params provided by the user*/
-// BAM file
-// BAI file
-// DGE matrix file
-// Reference genome file
-// Sequencing format
-// Sample_name
-// (Optional) Barcodes file
-// (Optional) Alevin quantification file
 
 
 /* Some execution prechecks*/
-if (params.sequencing == null)
+if ( params.sequencing == null )
 	error "Enter sequencing argument (chromium or dropseq) !  [--sequencing]"
-if (params.sample_name == null)
-	error "Enter sample name (Name of the BAM/BAI file) [--sample_name]"
 
-if (params.sequencing == 'dropseq') {
+if ( params.annot == null)
+	error "Enter Genomic annotation GTF file ! [--annot]"
+
+if ( params.ipdb == null )
+	error "Enter Internal Priming reference file ! [--ipdb]"
+
+if ( params.quant_file == null )
+	error "Provide salmon quantification preprocessing file ! [--quant_file]"
+
+
+if ( params.sequencing == 'dropseq' ) {
 	if (params.folder_in == null) {
 		println """ No dropseq FOLDER LOCATION SPECIFIED...."""
 		if( params.bam == null || params.bai == null || params.dge_matrix == null)
 			error "No BAM, the indexed BAI file, or DGE_matrix file inputed"
-	} else {
-		println """dropseq FOLDER LOCATION SPECIFIED...."""
-		//define required paths
-		params.bam = "${params.folder_in}/${params.sample_name}.bam"
-		params.bai = "${params.folder_in}/${params.sample_name}.bam.bai"
-		params.dge_matrix = "${params.folder_in}/DGE.txt"
 	}
 } else {
 	if (params.folder_in == null) {
-		// TO DEFINE LATER
+		println """ No chromium FOLDER LOCATION SPECIFIED...."""
+		if( params.bam == null || params.bai == null || params.dge_matrix == null)
+			error "No BAM, the indexed BAI file, or DGE_matrix file inputed"
 	} else {
 		println """chromium FOLDER LOCATION SPECIFIED...."""
 		//define required paths
-		params.bam = "${params.folder_in}/${params.sample_name}.bam"
-		params.bai = "${params.folder_in}/${params.sample_name}.bam.bai"
+		params.bam = "${params.folder_in}/possorted_genome_bam.bam"
+		params.bai = "${params.folder_in}/possorted_genome_bam.bam.bai"
 		params.dge_matrix = "${params.folder_in}/filtered_feature_bc_matrix.h5"
-		params.barcodes = "${params.folder_in}/filtered_feature_bc_matrix/barcodes.tsv.gz"
+		if (params.barcodes == 'null')
+			params.barcodes = "${params.folder_in}/filtered_feature_bc_matrix/barcodes.tsv.gz"
 	}
 }
-if ( params.annot == null)
-	error "Enter Genomic annotation GTF file ! [--annot]"
-if ( params.ipdb == null )
-	error "Enter Internal Priming reference file ! [--ipdb]"
-if (params.quant_file == null)
-	println """ No salmon alevin quantification specified """
-
-
-
 
 
 
@@ -118,26 +108,28 @@ println """\
 		 ===============================
 		 Author: PLASS Lab
 		 *****************
-		 Last update : February 2022
+		 Last update : October 2022
 		 P-CMRC - Barcelona, SPAIN
 
-		 sample_name: ${params.sample_name}
 		 folder_in: ${params.folder_in}
 		 BAM file (required): ${params.bam}
 		 BAI file (required): ${params.bai}
 		 DGE file (required): ${params.dge_matrix}
-		 Barcodes file (optional): ${params.barcodes}
-		 Quantification alevin file (optional): ${params.quant_file}
+		 Quantification Salmon file (required): ${params.quant_file}
+		 Internal priming reference file (required): ${params.ipdb}
+		 Barcodes file [--barcodes] (optional): ${params.barcodes}
 
 		 Annotation reference file (required):  ${params.annot}
 		 Sequencing type (required): ${params.sequencing}
-		 Transcriptomic distance threshold (optional): ${params.dt_threshold}
-		 Transcriptomic end distance threhsold (optional): ${params.dt_exon_end_threshold}
-		 Max cpus (optional): ${params.cpu_defined}
+		 Transcriptomic distance threshold [--dt_threshold] (optional): ${params.dt_threshold}
+		 Transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional): ${params.dt_exon_end_threshold}
+		 Max cpus [--cpu_defined] (optional): ${params.cpu_defined}
+		 subsampling [--subsampling]: ${params.subsampling}
+		 mapQ threshold [--mapq]: ${params.mapq}
+		 theshold fraction gene [--gene_fraction]: ${params.gene_fraction}
+		 binsize fragment probability [--binsize]: ${params.binsize}
 
-		 Internal priming reference file: ${params.ipdb}
-
-		 Publishing repository: ${params.publish_rep}
+		 Publishing repository [--publish_rep] (optional): ${params.publish_rep}
 
 		 """
 .stripIndent()
@@ -205,7 +197,7 @@ process internal_priming_splitting{
 	script:
 	"""
 	#IPDB_splitting
-	awk '{print>\$1".ip_extracted"}' ${ipdb_DB}
+	sed 's/chr//g' ${ipdb_DB} | awk '{print>\$1".ip_extracted"}'
 	#rename -d 'chr' *
 	"""
 }
@@ -218,6 +210,8 @@ process bam_splitting{
 	publishDir "${params.publish_rep}/reads/bams/", overwrite: true
 	maxForks params.cpu_defined
 	input:
+	val chrc				from params.chr_concordance
+	val subsamp				from params.subsampling
 	val seqtype				from params.sequencing
 	val samtoolbin			from params.samtools_bin
 	val pythonbin 			from params.python_bin
@@ -235,27 +229,8 @@ process bam_splitting{
 			"""
 			#Filter reads based on mapping quality (20) and split by chromosome
 			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
-			${samtoolbin} view ${bam_file} ${chr_id} -e '[gf]=~"(CODING|UTR)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.esam
-			${samtoolbin} view ${bam_file} ${chr_id} -e '[gf]=~"(INTERGENIC|INTRONIC)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.isam
-			#Filter intronic associated reads
-			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} >> ${chr_id}.header
-			#Reconvert into Bam file
-			${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
-			"""
-		else
-			"""
-			#10X SEQ
-			#Filter reads based on mapping quality (20) and split by chromosome
-			${samtoolbin} view -h -b  ${bam_file} ${chr_id.baseName} --keep-tag "GX,GN,CB,UB" > ${chr_id}.bam
-			"""
-	else if(params.barcodes != "NONE")
-		if(params.sequencing == "dropseq")
-			"""
-			#(special for this run)
-			#Filter reads based on mapping quality (20) and split by chromosome
-			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
-			${samtoolbin} view ${bam_file} ${chr_id} -D XC:${barcodes_file} -e '[gf]=~"(CODING|UTR)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.esam
-			${samtoolbin} view ${bam_file} ${chr_id} -D XC:${barcodes_file} -e '[gf]=~"(INTERGENIC|INTRONIC)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.isam
+			${samtoolbin} view --subsample ${subsamp} ${bam_file} ${chrc}${chr_id} -e '[gf]=~"(CODING|UTR)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.esam
+			${samtoolbin} view --subsample ${subsamp} ${bam_file} ${chrc}${chr_id} -e '[gf]=~"(INTERGENIC|INTRONIC)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.isam
 			#Filter intronic associated reads
 			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
 			cat tempf >> ${chr_id}.header
@@ -267,14 +242,44 @@ process bam_splitting{
 			#10X SEQ
 			#Filter reads based on mapping quality (20) and split by chromosome
 			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
-			${samtoolbin} view -D CB:${barcodes_file} ${bam_file} ${chr_id.baseName} -e '[RE]=~"E"' --keep-tag "GX,GN,CB,UB"  > ${chr_id}.esam
-			${samtoolbin} view -D CB:${barcodes_file} ${bam_file} ${chr_id.baseName} -e '[RE]=~"I"' --keep-tag "GX,GN,CB,UB" > ${chr_id}.isam
+			${samtoolbin} view -q ${mq} --subsample ${subsamp} ${bam_file} ${chrc}${chr_id.baseName} -e '[RE]=~"E"' --keep-tag "CB,UB"  > ${chr_id}.esam
+			${samtoolbin} view -q ${mq} --subsample ${subsamp} ${bam_file} ${chrc}${chr_id.baseName} -e '[RE]=~"I"' --keep-tag "CB,UB"  > ${chr_id}.isam
 			#Filter intronic associated reads
-			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam >> ${chr_id}.header
+			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
+			cat tempf >> ${chr_id}.header
+			#Reconvert into Bam file
+			${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
+			"""
+	else if(params.barcodes != "NONE")
+		if(params.sequencing == "dropseq")
+			"""
+			#(special for this run)
+			#Filter reads based on mapping quality (20) and split by chromosome
+			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
+			${samtoolbin} view -q ${mq} --subsample ${subsamp} ${bam_file} ${chrc}${chr_id} -D XC:${barcodes_file} -e '[gf]=~"(CODING|UTR)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.esam
+			${samtoolbin} view -q ${mq} --subsample ${subsamp} ${bam_file} ${chrc}${chr_id} -D XC:${barcodes_file} -e '[gf]=~"(INTERGENIC|INTRONIC)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.isam
+			#Filter intronic associated reads
+			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
+			cat tempf >> ${chr_id}.header
+			#Reconvert into Bam file
+			${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
+			"""
+		else
+			"""
+			#10X SEQ
+			zcat ${barcodes_file} > bc.txt
+			#Filter reads based on mapping quality (20) and split by chromosome
+			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
+			${samtoolbin} view -q ${mq} --subsample ${subsamp} -D CB:bc.txt ${bam_file} ${chrc}${chr_id.baseName} -e '[RE]=~"E"' --keep-tag "CB,UB"  > ${chr_id}.esam
+			${samtoolbin} view -q ${mq} --subsample ${subsamp} -D CB:bc.txt ${bam_file} ${chrc}${chr_id.baseName} -e '[RE]=~"I"' --keep-tag "CB,UB"  > ${chr_id}.isam
+			#Filter intronic associated reads
+			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
+			cat tempf >> ${chr_id}.header
 			#Reconvert into Bam file
 			${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
 			"""
 }
+
 
 
 /*S5*/
@@ -394,13 +399,15 @@ process Probability_distribution{
 	publishDir "${params.publish_rep}/reads/probability/", overwrite: true, mode: 'copy'
 	input:
 	val r_bin				from params.rbin
+	val bins				from params.binsize
+	val gfrac				from params.gene_fraction
 	file unique_files		from fragment_filtered_uniq_ch.collect()
 	output:
 	file "BINS_PROB.txt"	into probability_ch
 	file "BINS_PROB.pdf"	into probability_pdf_file optional true
 	script:
 	"""
-	${r_bin} ${baseDir}/src/compute_prob_distribution.R "\$PWD/" BINS_PROB.txt BINS_PROB.pdf
+	${r_bin} ${baseDir}/src/compute_prob_distribution.R "\$PWD/" ${gfrac} ${bins} BINS_PROB.txt BINS_PROB.pdf
 	"""
 }
 
@@ -452,15 +459,29 @@ process DGE_generation{
 	file "ALL_predicted_cells"			into pred_file
 
 	script:
-	"""
-	#1- merge all the predicted cell files in an single One
-	#******************************************************
-	Rscript ${baseDir}/src/merge_pred_cells.R \$PWD ALL_predicted_cells
+	if (params.sequencing == "dropseq")
+		"""
+		#1- merge all the predicted cell files in an single One
+		#******************************************************
+		Rscript ${baseDir}/src/merge_pred_cells.R \$PWD ALL_predicted_cells
 
-	#Merge ALL cells prediction with DGE table
-	#*****************************************
-	python3 ${baseDir}/src/merge_DGE_PRED.py ALL_predicted_cells ${dge_mat} APADGE.txt
-	"""
+		#Merge ALL cells prediction with DGE table
+		#*****************************************
+		python3 ${baseDir}/src/merge_DGE_PRED.py ALL_predicted_cells ${dge_mat} APADGE.txt
+		"""
+	else
+		"""
+		#preprocess h5 file
+		Rscript ${baseDir}/src/processh5.R ${dge_mat} DGE.txt
+
+		#1- merge all the predicted cell files in an single One
+		#******************************************************
+		Rscript ${baseDir}/src/merge_pred_cells.R \$PWD ALL_predicted_cells
+
+		#Merge ALL cells prediction with DGE table
+		#*****************************************
+		python3 ${baseDir}/src/merge_DGE_PRED.py ALL_predicted_cells DGE.txt APADGE.txt
+		"""
 }
 
 

@@ -38,14 +38,15 @@ if ('gene_version' in gtf.columns) and ('transcript_version' in gtf.columns):
 
 # check presence of chr in gtf
 if 'chr' in gtf.Chromosome.values[1]:
-	# gtf['Chromosome'] = gtf.Chromosome.str.replace('chr','')
-	pass
+	gtf['Chromosome'] = gtf.Chromosome.str.replace('chr','')
+	# pass
 else:
 	pass
 
 #extract exons
 print('gtf opening...')
 gtf = gtf[(gtf.Feature=='exon') & (gtf.gene_type.isin(['protein_coding','processed_pseudogene','transcribed_unprocessed_pseudogene','lncRNA']))]
+display(gtf.columns)
 gtf = gtf[['Chromosome','Start','End','Strand','gene_id','gene_name','gene_type','transcript_id','transcript_name','transcript_type','exon_number','exon_id']]
 
 display(gtf)
