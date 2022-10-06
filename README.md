@@ -31,31 +31,24 @@ To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+[Conda](https://www.anaconda.com/) package tool or [Mamba](https://github.com/mamba-org/mamba) (Fast reiplementation of conda)
 
 ### Installation
 
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
-
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+1. Clone the repo and enter in the folder
    ```sh
-   git clone https://github.com/your_username_/Project-Name.git
+   git clone https://github.com/p-CMRC-LAB/SCALPEL.git
    ```
-3. Install NPM packages
+2. Install the required packages
    ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
+   conda install -c bioconda -c defaults -c conda-forge --file requirements.txt
    ```
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+### Usage
+
+See [SCALPEL usage documentation]() for detailed usage of the tool
+
+
 
 
 
