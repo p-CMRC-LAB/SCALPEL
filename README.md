@@ -39,7 +39,7 @@ To get a local copy up and running follow these simple example steps.
    ```sh
    git clone https://github.com/p-CMRC-LAB/SCALPEL.git
    ```
-2. Install the required packages
+2. Enter into the scalpel folder and Install the required packages
    ```sh
    conda install -c bioconda -c defaults -c conda-forge --file requirements.txt
    ```
