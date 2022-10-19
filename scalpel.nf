@@ -44,7 +44,6 @@ params.python_bin = 'python3'
 params.bedmap_bin = 'bedmap'
 params.chr_concordance = ''
 params.mapq = 10
-params.barcodes = 'null'
 
 /*Some params initilialization*/
 params.dt_threshold = 750
@@ -56,6 +55,41 @@ params.subsampling = 1
 params.gene_fraction = "90%"
 params.binsize = 25
 
+
+if ( params.help )
+	error """"
+	===============================
+	SCALPEL - N F   P I P E L I N E
+	===============================
+
+	Execution:
+	- In case of providing 10X cell ranger folder:
+	usage: nextflow run -resume scalpel.nf --sequencing <chromium> --folder_in <10X_folder> --annot <genome_annotation_reference> --ipdb <internal_priming_ref_file> --quant_file <salmon_preprocessed_file>
+
+	- If providing Dropseq files or Others:
+	usage: nextflow run -resume scalpel.nf --sequencing <dropseq> --bam <BAM> --bai <BAI> --dge_matrix <DGE> --barcodes <barcodes> --annot <genome_annotation_reference> --ipdb <internal_priming_ref_file> --quant_file <salmon_preprocessed_file>
+
+	Output options:
+	--folder_in,						Path to 10X Cellranger results folder [required if 10X file analysis]
+	--bam,							Path to indexed BAM file [required]
+	--bai,							Path to BAM index file	[required]
+	--dge_matrix,						Path to DGE count matrix file [required]
+	--quant_file,						Path to salmon quantification file from preprocessing [required]
+	--ipdb, 						Path to internal priming reference annotation file [required]
+	--barcodes,						Path to file containing valid barcodes [required]
+	--annot,						Path to genomic annotation reference file [required]
+	--sequencing,						Sequencing type [chromium,dropseq]
+
+	[--dt_threshold] (optional),				Transcriptomic distance threshold
+	[--dt_exon_end_threshold] (optional)			Transcriptomic end distance threhsold
+	[--cpu_defined] (optional)				Max cpus (default, 50)
+	[--subsampling]						BAM file subsampling threshold (default 1, select all reads)
+	[--mapq]						have mapping quality >= INT
+	[--gene_fraction]					theshold fraction gene
+	[--binsize]						binsize fragment probability
+	[--publish_rep] (optional)				Publishing repository
+	[--chr_concordance]					Charachter at add in order to match chromosome name in BAM file and the genome reference annotation file
+	"""
 
 
 /* Some execution prechecks*/
@@ -86,11 +120,10 @@ if ( params.sequencing == 'dropseq' ) {
 	} else {
 		println """chromium FOLDER LOCATION SPECIFIED...."""
 		//define required paths
-		params.bam = "${params.folder_in}/possorted_genome_bam.bam"
-		params.bai = "${params.folder_in}/possorted_genome_bam.bam.bai"
-		params.dge_matrix = "${params.folder_in}/filtered_feature_bc_matrix.h5"
-		if (params.barcodes == 'null')
-			params.barcodes = "${params.folder_in}/filtered_feature_bc_matrix/barcodes.tsv.gz"
+		params.bam = "${params.folder_in}/outs/possorted_genome_bam.bam"
+		params.bai = "${params.folder_in}/outs/possorted_genome_bam.bam.bai"
+		params.dge_matrix = "${params.folder_in}/outs/filtered_feature_bc_matrix.h5"
+		params.barcodes = "${params.folder_in}/outs/filtered_feature_bc_matrix/barcodes.tsv.gz"
 	}
 }
 
@@ -117,17 +150,18 @@ println """\
 		 DGE file (required): ${params.dge_matrix}
 		 Quantification Salmon file (required): ${params.quant_file}
 		 Internal priming reference file (required): ${params.ipdb}
-		 Barcodes file [--barcodes] (optional): ${params.barcodes}
+		 Barcodes file [--barcodes]: ${params.barcodes}
 
 		 Annotation reference file (required):  ${params.annot}
 		 Sequencing type (required): ${params.sequencing}
 		 Transcriptomic distance threshold [--dt_threshold] (optional): ${params.dt_threshold}
 		 Transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional): ${params.dt_exon_end_threshold}
-		 Max cpus [--cpu_defined] (optional): ${params.cpu_defined}
+		 Max cpus [--cpu_defined] (default 50): ${params.cpu_defined}
 		 subsampling [--subsampling]: ${params.subsampling}
 		 mapQ threshold [--mapq]: ${params.mapq}
 		 theshold fraction gene [--gene_fraction]: ${params.gene_fraction}
 		 binsize fragment probability [--binsize]: ${params.binsize}
+		 chromosome character paste [--chr_concordance]: ${params.chr_concordance}
 
 		 Publishing repository [--publish_rep] (optional): ${params.publish_rep}
 

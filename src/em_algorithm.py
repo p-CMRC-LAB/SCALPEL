@@ -55,6 +55,8 @@ cell = cell.astype({'gene_name':'str'})
 
 #EM algorithm
 print('looping')
+cell = cell.astype({'gene_name':'str', 'transcript_name':'str'})
+cell = cell.dropna()
 res = [[tab[1].transcript_name.unique().tolist(), em_algorithm(tab[1][['umi','transcript_name','frag_prob_weighted']].pivot_table(index='umi',columns='transcript_name',values='frag_prob_weighted', fill_value=0))] for tab in cell.groupby('gene_name')]
 res = pd.DataFrame(res).dropna()
 display(res)
