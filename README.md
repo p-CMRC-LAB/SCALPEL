@@ -50,9 +50,6 @@ See [SCALPEL usage documentation](https://data.cyverse.org/dav-anon/iplant/home/
 
 
 
-
-
-
 <!-- CONTACT -->
 ## Contact
 
