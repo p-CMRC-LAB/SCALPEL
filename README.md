@@ -46,7 +46,8 @@ To get a local copy up and running follow these simple example steps.
 
 ### Usage
 
-See [SCALPEL usage documentation](https://data.cyverse.org/dav-anon/iplant/home/franzx5/demo_10X_data_GSE104556/SCALPEL.html) for detailed usage of the tool
+
+See [SCALPEL usage documentation](https://readthedoctest-franz.readthedocs.io/en/latest/scRNAseq_10X.html) for detailed usage of the tool
 
 
 
