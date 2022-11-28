@@ -19,6 +19,36 @@ params.salmon_path_bin = 'salmon'
 params.salmon_quant_library_type = 'A'
 params.salmon_quant_threads = 10
 params.cpu_defined = 24
+params.tagR1 = "R1"
+params.tagR2 = "R2"
+
+if ( params.help )
+	error """"
+	===============================
+	SCALPEL - N F   P I P E L I N E
+	===============================
+
+	Execution:
+	- In case of providing 10X cell ranger folder:
+	usage: nextflow run -resume SCALPEL/preprocessing_scalpel.nf --sample_names <SAMPLE1,SAMPLE2,...>  --folder_in <FASTQ_FOLDER_PATH> --reference_fasta_transcript <REF_FASTA>
+
+	Output options:
+	--sample_names,						Name of the samples to process (same as the FASTQ file names) [required]
+	--folder_in,						Path to FASTQ files folder [required]
+	--reference_fasta_transcript				Reference FASTA transcript file [required]
+	--salmon_index,						Path of salmon index (optional)
+
+	[--python_bin_path] (optional)				Path to Python bin (default: python3)
+	[--salmon_path_bin] (optional)				Path to Salmon bin (default: salmon)
+	[--publish_rep] (optional)				Publishing repository (default: preprocessing)
+	[--salmon_quant_library_type] (optional)		(default: A)
+	[--salmon_quant_threads] (optional)			(default: 10)
+	[--cpu_defined] (optional)				(default: 24)
+	--tagR1							(default: R1)
+	--tagR2							(default: R2)
+	"""
+
+
 
 /*Get list of samples to preprocess*/
 if (params.sample_names != null) {
@@ -89,16 +119,18 @@ if (params.salmon_index == null) {
 		input:
 		val sample from samples_ch
 		val salmon_path from params.salmon_path_bin
-		file fastqs from fastq_files_ch.collect()
+		val fastqs from params.folder_in
 		file salmon_idx from salmon_index_ch
 		val library_type from params.salmon_quant_library_type
 		val threads from params.salmon_quant_threads
+		val tgr1 from params.tagR1
+		val tgr2 from params.tagR2
 		output:
 		file "quants/${sample}_quant" into quantification_folder
 		file "${sample}.sf" into quant_files_ch
 		script:
 		"""
-		${salmon_path} quant -i ${salmon_idx} -l ${library_type} -1 ${sample}*R1*gz -2 ${sample}*R2*gz --validateMappings -o quants/${sample}_quant
+		${salmon_path} quant -i ${salmon_idx} -l ${library_type} -1 ${fastqs}/${sample}*${tgr1}*gz -2 ${fastqs}/${sample}*${tgr2}*gz --validateMappings -o quants/${sample}_quant -p ${threads}
 		cp quants/${sample}_quant/quant.sf ${sample}.sf1
 		awk -v FS='\t' -v OFS='\t' '{print \$0,"${sample}"}' ${sample}.sf1 > ${sample}.sf
 		"""
@@ -113,28 +145,30 @@ if (params.salmon_index == null) {
 		input:
 		val sample from samples_ch
 		val salmon_path from params.salmon_path_bin
-		file fastqs from fastq_files_ch.collect()
-		path salmon_idx from params.salmon_index
+		val fastqs from params.folder_in
+		val salmon_idx from params.salmon_index
 		val library_type from params.salmon_quant_library_type
 		val threads from params.salmon_quant_threads
+		val tgr1 from params.tagR1
+		val tgr2 from params.tagR2
 		output:
 		file "quants/${sample}_quant" into quantification_folder
 		file "${sample}.sf" into quant_files_ch
 		script:
 		"""
-		${salmon_path} quant -i ${salmon_idx} -l ${library_type} -1 ${sample}*R1*gz -2 ${sample}*R2*gz --validateMappings -o quants/${sample}_quant
+		${salmon_path} quant -i ${salmon_idx} -l ${library_type} -1 ${fastqs}/${sample}*${tgr1}*gz -2 ${fastqs}/${sample}*${tgr2}*gz --validateMappings -o quants/${sample}_quant -p ${threads}
 		cp quants/${sample}_quant/quant.sf ${sample}.sf1
 		awk -v FS='\t' -v OFS='\t' '{print \$0,"${sample}"}' ${sample}.sf1 > ${sample}.sf
 		"""
 	}
 }
 
+
 /*process salmon quantification files*/
 process quantification_processing{
-	tag "${quant} / ${sps}"
-	publishDir "${params.publish_rep}/${sps}/", overwrite: true, mode: 'copy'
+	tag "${quant}"
+	publishDir "${params.publish_rep}/", overwrite: true, mode: 'copy'
 	input:
-	file sps from params.sample_names
 	file quant from quant_files_ch.collect()
 	output:
 	file "quant.filtered" into quant_filtered_ch

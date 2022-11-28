@@ -43,8 +43,7 @@ params.rbin = 'Rscript'
 params.python_bin = 'python3'
 params.bedmap_bin = 'bedmap'
 params.chr_concordance = ''
-params.mapq = 10
-params.barcodes = 'null'
+params.mapq = 0
 
 /*Some params initilialization*/
 params.dt_threshold = 750
@@ -56,6 +55,41 @@ params.subsampling = 1
 params.gene_fraction = "90%"
 params.binsize = 25
 
+
+if ( params.help )
+	error """"
+	===============================
+	SCALPEL - N F   P I P E L I N E
+	===============================
+
+	Execution:
+	- In case of providing 10X cell ranger folder:
+	usage: nextflow run -resume scalpel.nf --sequencing <chromium> --folder_in <10X_folder> --annot <genome_annotation_reference> --ipdb <internal_priming_ref_file> --quant_file <salmon_preprocessed_file>
+
+	- If providing Dropseq files or Others:
+	usage: nextflow run -resume scalpel.nf --sequencing <dropseq> --bam <BAM> --bai <BAI> --dge_matrix <DGE> --barcodes <barcodes> --annot <genome_annotation_reference> --ipdb <internal_priming_ref_file> --quant_file <salmon_preprocessed_file>
+
+	Output options:
+	--folder_in,						Path to 10X Cellranger results folder [required if 10X file analysis]
+	--bam,							Path to indexed BAM file [required]
+	--bai,							Path to BAM index file	[required]
+	--dge_matrix,						Path to DGE count matrix file [required]
+	--quant_file,						Path to salmon quantification file from preprocessing [required]
+	--ipdb, 						Path to internal priming reference annotation file [required]
+	--barcodes,						Path to file containing valid barcodes [required]
+	--annot,						Path to genomic annotation reference file [required]
+	--sequencing,						Sequencing type [chromium,dropseq]
+
+	[--dt_threshold] (optional),				Transcriptomic distance threshold
+	[--dt_exon_end_threshold] (optional)			Transcriptomic end distance threhsold
+	[--cpu_defined] (optional)				Max cpus (default, 50)
+	[--subsampling]						BAM file subsampling threshold (default 1, select all reads)
+	[--mapq]						have mapping quality >= INT (default, 0)
+	[--gene_fraction]					theshold fraction gene
+	[--binsize]						binsize fragment probability
+	[--publish_rep] (optional)				Publishing repository
+	[--chr_concordance]					Charachter at add in order to match chromosome name in BAM file and the genome reference annotation file
+	"""
 
 
 /* Some execution prechecks*/
@@ -71,7 +105,6 @@ if ( params.ipdb == null )
 if ( params.quant_file == null )
 	error "Provide salmon quantification preprocessing file ! [--quant_file]"
 
-
 if ( params.sequencing == 'dropseq' ) {
 	if (params.folder_in == null) {
 		println """ No dropseq FOLDER LOCATION SPECIFIED...."""
@@ -86,14 +119,15 @@ if ( params.sequencing == 'dropseq' ) {
 	} else {
 		println """chromium FOLDER LOCATION SPECIFIED...."""
 		//define required paths
-		params.bam = "${params.folder_in}/possorted_genome_bam.bam"
-		params.bai = "${params.folder_in}/possorted_genome_bam.bam.bai"
-		params.dge_matrix = "${params.folder_in}/filtered_feature_bc_matrix.h5"
-		if (params.barcodes == 'null')
-			params.barcodes = "${params.folder_in}/filtered_feature_bc_matrix/barcodes.tsv.gz"
+		params.bam = "${params.folder_in}/outs/possorted_genome_bam.bam"
+		params.bai = "${params.folder_in}/outs/possorted_genome_bam.bam.bai"
+		params.dge_matrix = "${params.folder_in}/outs/filtered_feature_bc_matrix.h5"
+		params.barcodes = "${params.folder_in}/outs/filtered_feature_bc_matrix/barcodes.tsv.gz"
 	}
 }
 
+if ( params.barcodes == null )
+	error "Provide valid barcodes file ! [--barcodes]"
 
 
 
@@ -117,17 +151,18 @@ println """\
 		 DGE file (required): ${params.dge_matrix}
 		 Quantification Salmon file (required): ${params.quant_file}
 		 Internal priming reference file (required): ${params.ipdb}
-		 Barcodes file [--barcodes] (optional): ${params.barcodes}
+		 Barcodes file [--barcodes]: ${params.barcodes}
 
 		 Annotation reference file (required):  ${params.annot}
 		 Sequencing type (required): ${params.sequencing}
 		 Transcriptomic distance threshold [--dt_threshold] (optional): ${params.dt_threshold}
 		 Transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional): ${params.dt_exon_end_threshold}
-		 Max cpus [--cpu_defined] (optional): ${params.cpu_defined}
+		 Max cpus [--cpu_defined] (default 50): ${params.cpu_defined}
 		 subsampling [--subsampling]: ${params.subsampling}
 		 mapQ threshold [--mapq]: ${params.mapq}
 		 theshold fraction gene [--gene_fraction]: ${params.gene_fraction}
 		 binsize fragment probability [--binsize]: ${params.binsize}
+		 chromosome character paste [--chr_concordance]: ${params.chr_concordance}
 
 		 Publishing repository [--publish_rep] (optional): ${params.publish_rep}
 
@@ -152,7 +187,7 @@ process gtf_annotation_splitting{
 	file gtf_file				from file(params.annot)
 	file quantf					from file(params.quant_file)
 	output:
-	file "*"				into gtf_splitted_ch1, gtf_splitted_ch2 mode flatten
+	file "*"				into gtf_splitted_ch1, gtf_splitted_ch2, gtf_splitted_ch3 mode flatten
 	script:
 	"""
 	${pythonbin} ${baseDir}/src/gtf_splitting.py ${gtf_file} ${quantf}
@@ -178,9 +213,11 @@ process chromosome_processing{
 	output:
 	file "${chr_file.baseName}.exons"			into exons_ch1, exons_ch2, exons_ch3, exons_ch4
 	file "${chr_file.baseName}.exons_unique"	into exons_unique_ch
+	file "${chr_file.baseName}.exon_bedmap"		into exons_bedmap
+	file "${chr_file.baseName}.exon_bedmap2"		into exons_bedmap2
 	script:
 	"""
-	${pythonbin} ${baseDir}/src/exon_processing.py ${chr_file}  ${trs_distance} ${trs_end_distance}  ${chr_file.baseName}.exons ${chr_file.baseName}.exons_unique
+	${pythonbin} ${baseDir}/src/exon_processing.py ${chr_file}  ${trs_distance} ${trs_end_distance}  ${chr_file.baseName}.exons ${chr_file.baseName}.exons_unique ${chr_file.baseName}.exon_bedmap ${chr_file.baseName}.exon_bedmap2
 	"""
 }
 
@@ -191,17 +228,16 @@ process internal_priming_splitting{
 	publishDir "${params.publish_rep}/ipdb_splitted", overwrite: true
 	maxForks params.cpu_defined
 	input:
+	val pythonbin	from params.python_bin
 	file ipdb_DB	from file(params.ipdb)
+	file chr_id		from gtf_splitted_ch3
 	output:
 	file "*"		into ipdb_files mode flatten
 	script:
 	"""
-	#IPDB_splitting
-	sed 's/chr//g' ${ipdb_DB} | awk '{print>\$1".ip_extracted"}'
-	#rename -d 'chr' *
+	${pythonbin} ${baseDir}/src/parse_and_split_ipdb.py ${ipdb_DB} ${chr_id} ${chr_id}.ip_extracted
 	"""
 }
-
 
 
 /*S4*/
@@ -221,7 +257,7 @@ process bam_splitting{
 	file bai_file 			from file(params.bai)
 	file barcodes_file 		from file(params.barcodes)
 	output:
-	file "${chr_id}.bamf"			into exonic_bams_ch, exonic_bams_ch2
+	file "${chr_id}.bamf"			into exonic_bams_ch, exonic_bams_ch2 optional true
 
 	script:
 	if(params.barcodes == 'null')
@@ -270,13 +306,24 @@ process bam_splitting{
 			zcat ${barcodes_file} > bc.txt
 			#Filter reads based on mapping quality (20) and split by chromosome
 			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
-			${samtoolbin} view -q ${mq} --subsample ${subsamp} -D CB:bc.txt ${bam_file} ${chrc}${chr_id.baseName} -e '[RE]=~"E"' --keep-tag "CB,UB"  > ${chr_id}.esam
+			${samtoolbin} view -q ${mq} --subsample ${subsamp} -D CB:bc.txt ${bam_file} ${chrc}${chr_id.baseName}  --keep-tag "CB,UB"  > ${chr_id}.esam
 			${samtoolbin} view -q ${mq} --subsample ${subsamp} -D CB:bc.txt ${bam_file} ${chrc}${chr_id.baseName} -e '[RE]=~"I"' --keep-tag "CB,UB"  > ${chr_id}.isam
-			#Filter intronic associated reads
-			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
-			cat tempf >> ${chr_id}.header
-			#Reconvert into Bam file
-			${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
+			if [ -s ${chr_id}.esam ];then
+				if [ -s ${chr_id}.isam ];then
+					#Filter intronic associated reads
+					${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
+					cat tempf >> ${chr_id}.header
+					#Reconvert into Bam file
+					${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
+				else
+					#if presence of no intronic reads...
+					cat ${chr_id}.esam >> ${chr_id}.header
+					#Reconvert into Bam file
+					${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
+				fi
+			else
+				echo "Empty file"
+			fi
 			"""
 }
 
@@ -291,15 +338,15 @@ process bed_formatting{
 	file bamf					from exonic_bams_ch
 	val pythonbin				from params.python_bin
 	output:
-	file "${bamf.baseName}.bed" 	into bed_ch
-	file "${bamf.baseName}.bedsb"	into bed_coords
+	file "${bamf.baseName}.bed" 		into bed_ch
+	file "${bamf.baseName}.bed_bedmap"	into bed_coords
 	script:
 	"""
 	#Convertion of bam files to bed files (1) and preprocessing of spliced reads for late filtering ops (2)
-	bam2bed --all-reads --split --do-not-sort < ${bamf} | ${pythonbin} ${baseDir}/src/splicing_filtering.py - ${bamf.baseName}.bed
+	bam2bed --all-reads --split --do-not-sort < ${bamf} | ${pythonbin} ${baseDir}/src/splicing_filtering.py - ${bamf.baseName}.bed ${bamf.baseName}.bed_bedmap
 
 	#Extract coords and sort for overlapping purposes (bedmap - 3)
-	awk -v OFS='\t' '{print \$1,\$2,\$3,\$4}' ${bamf.baseName}.bed | sort -k1,1 -k2,2n -k3,3n > ${bamf.baseName}.bedsb
+	#awk -v OFS='\t' '{print \$1,\$2,\$3,\$4}' ${bamf.baseName}.bed | sort -k1,1 -k2,2n -k3,3n > ${bamf.baseName}.bedsb
 	"""
 }
 
@@ -312,7 +359,7 @@ process bed_exons_overlapping{
 	input:
 	val bedmapbin 					from params.bedmap_bin
 	file bed						from bed_ch
-	file exon_file					from exons_ch2.collect()
+	file exon_file					from exons_bedmap.collect()
 	file bedcds						from bed_coords
 	val fraction_rd 				from params.fraction_read_overlapping
 	output:
@@ -321,10 +368,10 @@ process bed_exons_overlapping{
 	script:
 	"""
 	#Extract exon coords and sort (1)
-	awk -v OFS='\t' '{if (NR!=1) {print \$1,\$2,\$3,\$6,\$9,\$11}}' ${bedcds.baseName}.exons | sort -k1,1 -k2,2n -k3,3n > exonsb
+	#awk -v OFS='\t' '{if (NR!=1) {print \$1,\$2,\$3,\$6,\$9,\$11}}' ${bedcds.baseName}.exons | sort -k1,1 -k2,2n -k3,3n > exonsb
 
 	#mapped reads on exons bed (2)
-	${bedmapbin} --echo --echo-map --bp-ovr ${fraction_rd} --delim "****" ${bedcds} exonsb > ${bedcds.baseName}.bed_gtf
+	${bedmapbin} --echo --echo-map --bp-ovr ${fraction_rd} --delim "****" ${bedcds} ${bedcds.baseName}.exon_bedmap > ${bedcds.baseName}.bed_gtf
 	"""
 }
 
@@ -339,7 +386,7 @@ process bed_exons_filtering{
 	file bed 									from bed_ch2
 	file exon_file 								from exons_ch3.collect()
 	output:
-	file "${ebed.baseName}.bed_gtf_filtered"	into bed_gtf_filtered
+	file "${ebed.baseName}.bed_gtf_filtered"	into bed_gtf_filtered optional true
 	script:
 	"""
 	${pythonbin} ${baseDir}/src/overlapping_processing.py ${bed} ${ebed.baseName}.exons ${ebed} ${ebed.baseName}.bed_gtf_filtered
@@ -374,6 +421,7 @@ process Internal_priming_filtering{
 	val bedmapbin 											from params.bedmap_bin
 	val pythonbin											from params.python_bin
 	file frag_file											from spliced_filtered_ch
+	file exon_bd2											from exons_bedmap2.collect()
 	file exon_file											from exons_ch4.collect()
 	file ipn_file 											from ipdb_files.collect()
 	file gtf_uniq_file										from exons_unique_ch.collect()
@@ -383,12 +431,13 @@ process Internal_priming_filtering{
 	file "${frag_file.baseName}.readid" 					into readid_filtered_ch
 	script:
 	"""
-	#Extract exon coords and sort (1)
-	awk -v OFS='\t' '{if (NR!=1) {print \$1,\$2,\$3,\$6,\$9,\$11}}' ${frag_file.baseName}.exons | sort -k1,1 -k2,2n -k3,3n > exonsb
-	sort -k1,1 -k2,2n -k3,3n ${frag_file.baseName}.ip_extracted > iptb
+	#extract exon coords and sort (1)
+	#awk -v OFS='\t' '{if (NR!=1) {print \$1,\$2,\$3,\$6,\$9,\$11}}' ${frag_file.baseName}.exons | sort -k1,1 -k2,2n -k3,3n | sed 's/chr//g' > exonsb
+	#sort -k1,1 -k2,2n -k3,3n ${frag_file.baseName}.ip_extracted > iptb
 	#in case we have a presence of chr character
 	#sed -i 's/chr//g' iptb
-	${bedmapbin} --echo --echo-map --fraction-ref 1 --delim "****" iptb exonsb > ipsb
+
+	${bedmapbin} --echo --echo-map --fraction-ref 1 --delim "****" ${frag_file.baseName}.ip_extracted ${frag_file.baseName}.exon_bedmap2 > ipsb
 	${pythonbin} ${baseDir}/src/internalp_filtering.py ${frag_file} ${frag_file.baseName}.exons ipsb ${frag_file.baseName}.exons_unique ${frag_file.baseName}.fragment_filtered  ${frag_file.baseName}.fragment_filtered_unique ${frag_file.baseName}.readid
 	"""
 }
@@ -459,7 +508,7 @@ process DGE_generation{
 	file "ALL_predicted_cells"			into pred_file
 
 	script:
-	if (params.sequencing == "dropseq")
+	if (params.sequencing == "chromium")
 		"""
 		#1- merge all the predicted cell files in an single One
 		#******************************************************

@@ -130,12 +130,14 @@ def internal_priming(frag_tab, ip_tab, strand, scope_ip_threshold=300):
 #files Opening
 #reads
 reads = pd.read_parquet(args.bed_path).reset_index(drop=True)
+
+
 #ips
 ipn = pd.read_csv(args.ipn_path, sep='\*\*\*\*', names = ['ipn','exons'])
 ipn = ipn[~ipn.exons.isnull()]
 ipn = pd.concat([ipn.ipn.str.split('\t', expand=True), ipn.exons.str.split(';')], axis=1)
 ipn = ipn.explode('exons')
-ipn = ipn[[0,1,2,5,'exons']]
+# ipn = ipn[[0,1,2,5,'exons']]
 ipn.columns = ['chr_ipn','start_ipn','end_ipn','str_ipn','exons']
 ipn = pd.concat([ipn[['chr_ipn','start_ipn','end_ipn','str_ipn']], ipn.exons.str.split('\t', expand=True)], axis=1)
 ipn.columns = ['chr_ipn','start_ipn','end_ipn','str_rd','chr_ex','Start','End','gene_name','transcript_name','exon_number']
@@ -146,8 +148,9 @@ del ipn['End']
 del ipn['chr_ipn']
 ipn = ipn.astype(ipn_dtypes)
 ipn = ipn.drop_duplicates()
+
 #exons
-exons = pd.read_csv(args.exons_path, sep="\t")
+exons = pd.read_parquet(args.exons_path)
 #exons_unique
 gtf_unique = pd.read_csv(args.gtf_unique_path, sep="\t", header=None, names=['gene_name','transcript_name'])
 

@@ -272,6 +272,8 @@ parser.add_argument('transcriptomic_distance_threshold', type=int, default=sys.s
 parser.add_argument('transcript_end_distance_threshold', type=int, default=sys.stdin, help='transcriptomic distance end threshold value')
 parser.add_argument('exon_file', type=str, default=sys.stdout, help='path of the exon entries output bed file')
 parser.add_argument('exon_unique_file', type=str, default=sys.stdout, help='path of the unique gene exon entries output bed file')
+parser.add_argument('exon_bedmap', type=str, default=sys.stdout, help='path of the exon coords for bedmap output bed file')
+parser.add_argument('exon_bedmap2', type=str, default=sys.stdout, help='path of the exon coords for bedmap output bed file (internal priming)')
 args = parser.parse_args()
 
 #Variables
@@ -295,11 +297,18 @@ gtf = gtf.groupby('gene_name').apply(lambda x: remove_sim_exons(x, distance_thr=
 
 #Sorting Gtf file
 gtf = gtf.sort_values(by=['Chromosome','Start','End']).reset_index(drop=True)
+ex_coltypes = {'Chromosome':'str','Start':'int64','End':'int64','Strand':'str','StartR':'int32','EndR':'int32','gene_id':'category','gene_name':'category','transcript_id':'category','transcript_name':'category','exon_id':'category','exon_number':'int8','gene_type':'category','transcript_type':'category','salmon_rlp':'float'}
+gtf = gtf.astype(ex_coltypes)
 
 # Get unique genes associated to chr
 gtf_unique = gtf[['Chromosome','gene_name','transcript_name']].sort_values(by=['Chromosome','gene_name','transcript_name'])
 gtf_unique = gtf_unique[~gtf_unique.duplicated(subset='gene_name', keep=False)]
 
+
 #Writing
-gtf.to_csv(args.exon_file, sep='\t', doublequote=False, index=False, header=True)
+gtf.to_parquet(args.exon_file, engine='pyarrow')
 gtf_unique.to_csv(args.exon_unique_file, sep='\t', doublequote=False, index=False)
+gtf['id'] = gtf.index
+gtf[['Chromosome','Start','End','id']].to_csv(args.exon_bedmap, sep='\t', header=False, index=False)
+gtf['Chromosome'] = gtf.Chromosome.str.replace('chr','')
+gtf[['Chromosome','Start','End','gene_name','transcript_name','exon_number']].to_csv(args.exon_bedmap2, sep='\t', header=False, index=False)

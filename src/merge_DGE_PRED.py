@@ -21,8 +21,9 @@ print('predictions...')
 predictions = pd.read_csv(args.PRED_path, sep="\t")
 
 print('dge...')
-dge = pd.read_csv(args.DGE_path, sep="\t")
+dge = pd.read_csv(args.DGE_path, sep=",")
 dge = dge.rename(columns = {'GENE':'gene_name'})
+
 
 #melt dge table
 print('melting table...')

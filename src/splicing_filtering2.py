@@ -59,11 +59,10 @@ unspliceds = reads[reads.nb_splices==1]
 
 #sorting and casting
 spliceds = spliceds.sort_values(['frag_id','read_id','transcript_name','exon_number'])
-spliceds = spliceds.astype({'frag_id':'object','read_id':'object'})
+spliceds = spliceds.astype({'frag_id':'str','read_id':'str','transcript_name':'str'})
 #group reads by fragments, read_id, transcript_name
 grouped = spliceds[['frag_id','read_id','transcript_name','nb_splices','exon_number']].groupby(['frag_id','read_id','transcript_name'])
 spliceds['infilter'] = spliceds.frag_id + '-' + spliceds.read_id + '-' + spliceds.transcript_name
-#spliceds = spliceds.astype({'frag_id':'category','read_id':'category'})
 save1 = spliceds
 
 #check consecutivity of spliced reads on each transcript for each fragments
@@ -81,7 +80,7 @@ if len(spliceds_check) != 0:
 	spliceds = spliceds[spliceds.infilter.isin(to_keep)]
 
 	#check coordinates bordering of spliced reads
-	spliceds = spliceds.astype({'frag_id':'object','transcript_name':'object'})
+	spliceds = spliceds.astype({'frag_id':'str','transcript_name':'str'})
 	uncoherent_bordering = spliceds[(spliceds.start_rd!=spliceds.Start) & (spliceds.end_rd!=spliceds.End)]
 	to_remove_bordering = uncoherent_bordering.frag_id + '-' + uncoherent_bordering.transcript_name
 	spliceds['infilter'] = spliceds.frag_id + '-' + spliceds.transcript_name
@@ -89,7 +88,7 @@ if len(spliceds_check) != 0:
 	# del spliceds['infilter']
 
 	#filter unspurious transcripts mapping into unspliceds
-	unspliceds = unspliceds.astype({'frag_id':'object','read_id':'object'})
+	unspliceds = unspliceds.astype({'frag_id':'str','read_id':'str', 'transcript_name':'str'})
 	unspliceds['infilter'] = unspliceds.frag_id + '-' + unspliceds.transcript_name
 	to_keep = spliceds_check.frag_id + '-' + spliceds_check.trs
 
@@ -149,6 +148,8 @@ del reads['infilter']
 #delete pcr replicates
 reads = reads.drop_duplicates(['chr_rd','start_rd','end_rd','str_rd','Start','End','read_id','transcript_name','frag_id'])
 reads = reads.astype({'frag_id':'category','Start_rdR':'int64','End_rdR':'int64','dist_END':'int32','transcript_name':'category'})
+#delete chr tag
+reads.chr_rd = reads.chr_rd.str.replace("chr","")
 
 #Writing
 print("writing...")
