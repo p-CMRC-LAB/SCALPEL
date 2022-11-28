@@ -21,7 +21,11 @@ genome_cover = function(genome_gr, bamfiles, bamnames, gene_in, targets_trs=c(),
   start_gene = min(start(gene_gr))
   end_gene = max(end(gene_gr))
   strand_gene = unique(as.character(strand(gene_gr)))
+<<<<<<< HEAD
   seqlevels(gene_gr) = na.omit(as.character(seqnames(gene_gr)))[1]
+=======
+  seqlevels(gene_gr) = as.character(seqnames(gene_gr))[1]
+>>>>>>> 3a0e40369ab788e3b2e9b4fa9e8a61b986a28aff
   #Make TxDb from Granges objects 
   gene_txdb = suppressWarnings(makeTxDbFromGRanges(gene_gr))
   if(strand_gene == "-"){

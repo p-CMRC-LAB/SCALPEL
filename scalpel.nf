@@ -43,7 +43,11 @@ params.rbin = 'Rscript'
 params.python_bin = 'python3'
 params.bedmap_bin = 'bedmap'
 params.chr_concordance = ''
+<<<<<<< HEAD
 params.mapq = 0
+=======
+params.mapq = 10
+>>>>>>> 3a0e40369ab788e3b2e9b4fa9e8a61b986a28aff
 
 /*Some params initilialization*/
 params.dt_threshold = 750
@@ -84,7 +88,11 @@ if ( params.help )
 	[--dt_exon_end_threshold] (optional)			Transcriptomic end distance threhsold
 	[--cpu_defined] (optional)				Max cpus (default, 50)
 	[--subsampling]						BAM file subsampling threshold (default 1, select all reads)
+<<<<<<< HEAD
 	[--mapq]						have mapping quality >= INT (default, 0)
+=======
+	[--mapq]						have mapping quality >= INT
+>>>>>>> 3a0e40369ab788e3b2e9b4fa9e8a61b986a28aff
 	[--gene_fraction]					theshold fraction gene
 	[--binsize]						binsize fragment probability
 	[--publish_rep] (optional)				Publishing repository

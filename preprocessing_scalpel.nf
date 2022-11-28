@@ -50,6 +50,33 @@ if ( params.help )
 
 
 
+
+if ( params.help )
+	error """"
+	===============================
+	SCALPEL - N F   P I P E L I N E
+	===============================
+
+	Execution:
+	- In case of providing 10X cell ranger folder:
+	usage: nextflow run -resume SCALPEL/preprocessing_scalpel.nf --sample_names <SAMPLE1,SAMPLE2,...>  --folder_in <FASTQ_FOLDER_PATH> --reference_fasta_transcript <REF_FASTA>
+
+	Output options:
+	--sample_names,						Name of the samples to process (same as the FASTQ file names) [required]
+	--folder_in,						Path to FASTQ files folder [required]
+	--reference_fasta_transcript				Reference FASTA transcript file [required]
+
+	[--python_bin_path] (optional)				Path to Python bin (default: python3)
+	[--salmon_path_bin] (optional)				Path to Salmon bin (default: salmon)
+	[--publish_rep] (optional)						Publishing repository (default: preprocessing)
+	[--salmon_quant_library_type] (optional)		(default: A)
+	[--salmon_quant_threads] (optional)				(default: 10)
+	[--cpu_defined] (optional)						(default: 24)
+
+	"""
+
+
+
 /*Get list of samples to preprocess*/
 if (params.sample_names != null) {
 	samples_ch = Channel.from(params.sample_names).splitCsv().flatten()
