@@ -43,11 +43,8 @@ params.rbin = 'Rscript'
 params.python_bin = 'python3'
 params.bedmap_bin = 'bedmap'
 params.chr_concordance = ''
-<<<<<<< HEAD
 params.mapq = 0
-=======
 params.mapq = 10
->>>>>>> 3a0e40369ab788e3b2e9b4fa9e8a61b986a28aff
 
 /*Some params initilialization*/
 params.dt_threshold = 750
@@ -88,15 +85,11 @@ if ( params.help )
 	[--dt_exon_end_threshold] (optional)			Transcriptomic end distance threhsold
 	[--cpu_defined] (optional)				Max cpus (default, 50)
 	[--subsampling]						BAM file subsampling threshold (default 1, select all reads)
-<<<<<<< HEAD
 	[--mapq]						have mapping quality >= INT (default, 0)
-=======
-	[--mapq]						have mapping quality >= INT
->>>>>>> 3a0e40369ab788e3b2e9b4fa9e8a61b986a28aff
 	[--gene_fraction]					theshold fraction gene
 	[--binsize]						binsize fragment probability
 	[--publish_rep] (optional)				Publishing repository
-	[--chr_concordance]					Charachter at add in order to match chromosome name in BAM file and the genome reference annotation file
+	[--chr_concordance]					Character at add in order to match chromosome name in BAM file and the genome reference annotation file
 	"""
 
 
@@ -461,10 +454,10 @@ process Probability_distribution{
 	file unique_files		from fragment_filtered_uniq_ch.collect()
 	output:
 	file "BINS_PROB.txt"	into probability_ch
-	file "BINS_PROB.pdf"	into probability_pdf_file optional true
+	file "BINS_PROB.jpeg"	into probability_pdf_file optional true
 	script:
 	"""
-	${r_bin} ${baseDir}/src/compute_prob_distribution.R "\$PWD/" ${gfrac} ${bins} BINS_PROB.txt BINS_PROB.pdf
+	${r_bin} ${baseDir}/src/compute_prob_distribution.R "\$PWD/" ${gfrac} ${bins} BINS_PROB.txt BINS_PROB.jpeg
 	"""
 }
 
@@ -491,7 +484,7 @@ process Fragment_probabilities{
 process EM_algorithm{
 	tag "${cell_file.baseName}"
 	publishDir "${params.publish_rep}/reads/prediction/", overwrite: true, mode:'copy'
-	maxForks 35
+	maxForks 53
 	input:
 	file cell_file	from cells_ch
 	output:
@@ -516,7 +509,7 @@ process DGE_generation{
 	file "ALL_predicted_cells"			into pred_file
 
 	script:
-	if (params.sequencing == "chromium")
+	if (params.sequencing == "dropseq")
 		"""
 		#1- merge all the predicted cell files in an single One
 		#******************************************************

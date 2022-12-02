@@ -5,7 +5,7 @@
 # library(Seurat)
 library(argparse)
 library(data.table)
-library(Matrix)
+library(Matrix, lib.loc="~/CEPH/R_PACKAGES")
 
 #settings
 #********

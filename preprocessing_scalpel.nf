@@ -36,7 +36,7 @@ if ( params.help )
 	--sample_names,						Name of the samples to process (same as the FASTQ file names) [required]
 	--folder_in,						Path to FASTQ files folder [required]
 	--reference_fasta_transcript				Reference FASTA transcript file [required]
-	--salmon_index,						Path of salmon index (optional)
+	--salmon_index,						Path of salmon index (optional) -- will skip the salmon index processing task
 
 	[--python_bin_path] (optional)				Path to Python bin (default: python3)
 	[--salmon_path_bin] (optional)				Path to Salmon bin (default: salmon)
