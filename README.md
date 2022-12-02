@@ -39,9 +39,17 @@ To get a local copy up and running follow these simple example steps.
    ```sh
    git clone https://github.com/p-CMRC-LAB/SCALPEL.git
    ```
-2. Enter into the scalpel folder and Install the required packages
+2. Install the required packages using the requirement.txt file in the SCALPEL folder
    ```sh
-   conda install -c bioconda -c defaults -c conda-forge --file requirements.txt
+   conda install -c bioconda -c defaults -c conda-forge --file SCALPEL/requirements.txt
+   ```
+   
+   Another solution (if conda installation takes long) can be to create a Conda environment, install Mamba (faster implementation of Conda) and install the packages using mamba:
+   ```sh
+   conda create --name scalpel_env python=3.9
+   conda activate scalpel_env
+   conda install -c conda-forge mamba
+   mamba install -c bioconda -c defaults -c conda-forge --file SCALPEL/requirements.txt
    ```
 
 ### Usage
