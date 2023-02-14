@@ -3,6 +3,8 @@
 #import libraries
 import argparse
 import pandas as pd
+import vaex as vx
+import glob
 from IPython.display import display
 
 
@@ -17,13 +19,11 @@ args = parser.parse_args()
 
 #Open files
 print('Files opening...')
-print('predictions...')
-predictions = pd.read_csv(args.PRED_path, sep="\t")
+predictions = pd.read_csv(args.PRED_path, names = ["bc","gene_name","gene_id","transcript_name","transcript_id","tr_prob"], sep="\t", skiprows = 1)
 
 print('dge...')
 dge = pd.read_csv(args.DGE_path, sep="\t")
 dge = dge.rename(columns = {'GENE':'gene_name'})
-
 
 #melt dge table
 print('melting table...')
@@ -48,5 +48,4 @@ dge = dge.pivot_table(index='gene_transcript', columns='bc', values='relative_pr
 
 #writing
 print('Writing...')
-dge.to_csv(args.OUTPUT_APADGE_path, sep="\t", doublequote=False)
-display(dge)
+dge.to_csv(args.OUTPUT_APADGE_path, sep="\t")

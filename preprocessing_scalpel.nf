@@ -65,13 +65,16 @@ if ( params.help )
 	--sample_names,						Name of the samples to process (same as the FASTQ file names) [required]
 	--folder_in,						Path to FASTQ files folder [required]
 	--reference_fasta_transcript				Reference FASTA transcript file [required]
+	--salmon_index,						Path of salmon index (optional) -- will skip the salmon index processing task
 
 	[--python_bin_path] (optional)				Path to Python bin (default: python3)
 	[--salmon_path_bin] (optional)				Path to Salmon bin (default: salmon)
-	[--publish_rep] (optional)						Publishing repository (default: preprocessing)
+	[--publish_rep] (optional)				Publishing repository (default: preprocessing)
 	[--salmon_quant_library_type] (optional)		(default: A)
-	[--salmon_quant_threads] (optional)				(default: 10)
-	[--cpu_defined] (optional)						(default: 24)
+	[--salmon_quant_threads] (optional)			(default: 10)
+	[--cpu_defined] (optional)				(default: 24)
+	--tagR1							(default: R1)
+	--tagR2							(default: R2)
 
 	"""
 
@@ -128,6 +131,7 @@ println """\
 if (params.salmon_index == null) {
 	process salmon_indexing{
 		tag "${reference_ft}"
+		publishDir "${params.publish_rep}/salmon_quant/", overwrite: true
 		input:
 		val salmon_path from params.salmon_path_bin
 		path reference_ft from params.reference_fasta_transcript

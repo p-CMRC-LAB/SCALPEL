@@ -67,8 +67,9 @@ gtf = gtf[(gtf.Chromosome != 'chrMT') & (gtf.Chromosome != 'MT')]
 # (8) Get chromosome names list...
 gtf = gtf.dropna()
 chromosome_names = gtf.Chromosome.unique()
-# chromosome_names = chromosome_names[~np.isnan(chromosome_names)]
-print(chromosome_names)
+
+# Also add +1 to match the index format as pyrange bedify the GTF input
+gtf.Start = gtf.Start + 1
 
 # (9) Order gtf file...
 gtf = gtf.sort_values(by=['Chromosome','Start','End'], ascending=[True,True,False]).reset_index(drop=True)

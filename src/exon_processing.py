@@ -308,7 +308,6 @@ gtf_unique = gtf_unique[~gtf_unique.duplicated(subset='gene_name', keep=False)]
 #Writing
 gtf.to_parquet(args.exon_file, engine='pyarrow')
 gtf_unique.to_csv(args.exon_unique_file, sep='\t', doublequote=False, index=False)
-gtf['id'] = gtf.index
-gtf[['Chromosome','Start','End','id']].to_csv(args.exon_bedmap, sep='\t', header=False, index=False)
+gtf[['Chromosome','Start','End','exon_id']].to_csv(args.exon_bedmap, sep='\t', header=False, index=False)
 gtf['Chromosome'] = gtf.Chromosome.str.replace('chr','')
 gtf[['Chromosome','Start','End','gene_name','transcript_name','exon_number']].to_csv(args.exon_bedmap2, sep='\t', header=False, index=False)

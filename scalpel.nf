@@ -43,17 +43,15 @@ params.rbin = 'Rscript'
 params.python_bin = 'python3'
 params.bedmap_bin = 'bedmap'
 params.chr_concordance = ''
-params.mapq = 0
-params.mapq = 10
 
 /*Some params initilialization*/
-params.dt_threshold = 750
+params.dt_threshold = 600
 params.dt_exon_end_threshold = 30
 params.cpu_defined = 50
 params.mt_remove = 1
 params.fraction_read_overlapping = 2
 params.subsampling = 1
-params.gene_fraction = "90%"
+params.gene_fraction = "80%"
 params.binsize = 25
 
 
@@ -85,7 +83,6 @@ if ( params.help )
 	[--dt_exon_end_threshold] (optional)			Transcriptomic end distance threhsold
 	[--cpu_defined] (optional)				Max cpus (default, 50)
 	[--subsampling]						BAM file subsampling threshold (default 1, select all reads)
-	[--mapq]						have mapping quality >= INT (default, 0)
 	[--gene_fraction]					theshold fraction gene
 	[--binsize]						binsize fragment probability
 	[--publish_rep] (optional)				Publishing repository
@@ -179,7 +176,7 @@ println """\
 // ********************************************************************
 
 /*S1*/
-process gtf_annotation_splitting{
+process Gtf_annotation_splitting{
 	tag "${gtf_file}"
 	publishDir "${params.publish_rep}/gtfs/", overwrite: true
 	maxForks params.cpu_defined
@@ -200,10 +197,11 @@ process gtf_annotation_splitting{
 }
 
 
+
 /*S2*/
-process chromosome_processing{
+process Chromosome_processing{
 	tag "${chr_file.baseName}"
-	publishDir "${params.publish_rep}/exons/", overwrite: true
+	publishDir "${params.publish_rep}/exons/", overwrite: true, mode: 'copy'
 	maxForks params.cpu_defined
 	input:
 	val pythonbin								from params.python_bin
@@ -215,7 +213,6 @@ process chromosome_processing{
 	file "${chr_file.baseName}.exons"			into exons_ch1, exons_ch2, exons_ch3, exons_ch4
 	file "${chr_file.baseName}.exons_unique"	into exons_unique_ch
 	file "${chr_file.baseName}.exon_bedmap"		into exons_bedmap
-	file "${chr_file.baseName}.exon_bedmap2"		into exons_bedmap2
 	script:
 	"""
 	${pythonbin} ${baseDir}/src/exon_processing.py ${chr_file}  ${trs_distance} ${trs_end_distance}  ${chr_file.baseName}.exons ${chr_file.baseName}.exons_unique ${chr_file.baseName}.exon_bedmap ${chr_file.baseName}.exon_bedmap2
@@ -223,28 +220,11 @@ process chromosome_processing{
 }
 
 
+
 /*S3*/
-process internal_priming_splitting{
-	tag "${ipdb_DB}"
-	publishDir "${params.publish_rep}/ipdb_splitted", overwrite: true
-	maxForks params.cpu_defined
-	input:
-	val pythonbin	from params.python_bin
-	file ipdb_DB	from file(params.ipdb)
-	file chr_id		from gtf_splitted_ch3
-	output:
-	file "*"		into ipdb_files mode flatten
-	script:
-	"""
-	${pythonbin} ${baseDir}/src/parse_and_split_ipdb.py ${ipdb_DB} ${chr_id} ${chr_id}.ip_extracted
-	"""
-}
-
-
-/*S4*/
-process bam_splitting{
+process Bam_splitting{
 	tag "${chr_id.baseName}"
-	publishDir "${params.publish_rep}/reads/bams/", overwrite: true
+	publishDir "${params.publish_rep}/reads/bams/", overwrite: true, mode: 'copy'
 	maxForks params.cpu_defined
 	input:
 	val chrc				from params.chr_concordance
@@ -252,86 +232,32 @@ process bam_splitting{
 	val seqtype				from params.sequencing
 	val samtoolbin			from params.samtools_bin
 	val pythonbin 			from params.python_bin
-	val mq					from params.mapq
 	file chr_id				from gtf_splitted_ch2
 	file bam_file 			from file(params.bam)
 	file bai_file 			from file(params.bai)
 	file barcodes_file 		from file(params.barcodes)
 	output:
-	file "${chr_id}.bamf"			into exonic_bams_ch, exonic_bams_ch2 optional true
+	file "${chr_id}.ebam"	into exonic_bams_ch, exonic_bams_ch2
 
 	script:
-	if(params.barcodes == 'null')
-		if (params.sequencing == "dropseq")
-			"""
-			#Filter reads based on mapping quality (20) and split by chromosome
-			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
-			${samtoolbin} view --subsample ${subsamp} ${bam_file} ${chrc}${chr_id} -e '[gf]=~"(CODING|UTR)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.esam
-			${samtoolbin} view --subsample ${subsamp} ${bam_file} ${chrc}${chr_id} -e '[gf]=~"(INTERGENIC|INTRONIC)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.isam
-			#Filter intronic associated reads
-			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
-			cat tempf >> ${chr_id}.header
-			#Reconvert into Bam file
-			${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
-			"""
-		else
-			"""
-			#10X SEQ
-			#Filter reads based on mapping quality (20) and split by chromosome
-			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
-			${samtoolbin} view -q ${mq} --subsample ${subsamp} ${bam_file} ${chrc}${chr_id.baseName} -e '[RE]=~"E"' --keep-tag "CB,UB"  > ${chr_id}.esam
-			${samtoolbin} view -q ${mq} --subsample ${subsamp} ${bam_file} ${chrc}${chr_id.baseName} -e '[RE]=~"I"' --keep-tag "CB,UB"  > ${chr_id}.isam
-			#Filter intronic associated reads
-			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
-			cat tempf >> ${chr_id}.header
-			#Reconvert into Bam file
-			${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
-			"""
-	else if(params.barcodes != "NONE")
-		if(params.sequencing == "dropseq")
-			"""
-			#(special for this run)
-			#Filter reads based on mapping quality (20) and split by chromosome
-			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
-			${samtoolbin} view -q ${mq} --subsample ${subsamp} ${bam_file} ${chrc}${chr_id} -D XC:${barcodes_file} -e '[gf]=~"(CODING|UTR)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.esam
-			${samtoolbin} view -q ${mq} --subsample ${subsamp} ${bam_file} ${chrc}${chr_id} -D XC:${barcodes_file} -e '[gf]=~"(INTERGENIC|INTRONIC)"' --keep-tag "XC,XM,gf,gs"  > ${chr_id}.isam
-			#Filter intronic associated reads
-			${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
-			cat tempf >> ${chr_id}.header
-			#Reconvert into Bam file
-			${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
-			"""
-		else
-			"""
-			#10X SEQ
-			zcat ${barcodes_file} > bc.txt
-			#Filter reads based on mapping quality (20) and split by chromosome
-			${samtoolbin} view -H ${bam_file} > ${chr_id}.header
-			${samtoolbin} view -q ${mq} --subsample ${subsamp} -D CB:bc.txt ${bam_file} ${chrc}${chr_id.baseName}  --keep-tag "CB,UB"  > ${chr_id}.esam
-			${samtoolbin} view -q ${mq} --subsample ${subsamp} -D CB:bc.txt ${bam_file} ${chrc}${chr_id.baseName} -e '[RE]=~"I"' --keep-tag "CB,UB"  > ${chr_id}.isam
-			if [ -s ${chr_id}.esam ];then
-				if [ -s ${chr_id}.isam ];then
-					#Filter intronic associated reads
-					${pythonbin} ${baseDir}/src/bam_filtering.py ${chr_id}.esam ${chr_id}.isam ${seqtype} tempf
-					cat tempf >> ${chr_id}.header
-					#Reconvert into Bam file
-					${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
-				else
-					#if presence of no intronic reads...
-					cat ${chr_id}.esam >> ${chr_id}.header
-					#Reconvert into Bam file
-					${samtoolbin} view -b ${chr_id}.header > ${chr_id}.bamf
-				fi
-			else
-				echo "Empty file"
-			fi
-			"""
+	if(params.sequencing == "dropseq")
+		"""
+		#Dropseq
+		#Filter reads and split by chromosome
+		${samtoolbin} view -b --subsample ${subsamp} ${bam_file} ${chrc}${chr_id.baseName} -D XC:${barcodes_file} --keep-tag "XC,XM" > ${chr_id}.ebam
+		"""
+	else
+		"""
+		#10X SEQ
+		zcat ${barcodes_file} > bc.txt
+		${samtoolbin} view -b --subsample ${subsamp} ${bam_file} ${chrc}${chr_id.baseName} -D CB:bc.txt --keep-tag "CB,UB" > ${chr_id}.ebam
+		"""
 }
 
 
 
-/*S5*/
-process bed_formatting{
+/*S4*/
+process Bed_formatting{
 	tag "${bamf.baseName}"
 	publishDir "${params.publish_rep}/reads/beds/", overwrite: true
 	maxForks params.cpu_defined
@@ -340,106 +266,111 @@ process bed_formatting{
 	val pythonbin				from params.python_bin
 	output:
 	file "${bamf.baseName}.bed" 		into bed_ch
-	file "${bamf.baseName}.bed_bedmap"	into bed_coords
 	script:
 	"""
-	#Convertion of bam files to bed files (1) and preprocessing of spliced reads for late filtering ops (2)
-	bam2bed --all-reads --split --do-not-sort < ${bamf} | ${pythonbin} ${baseDir}/src/splicing_filtering.py - ${bamf.baseName}.bed ${bamf.baseName}.bed_bedmap
+	#Convertion of bam files to bed files (1)
+	bam2bed --all-reads --split --do-not-sort < ${bamf} > temp_file
 
-	#Extract coords and sort for overlapping purposes (bedmap - 3)
-	#awk -v OFS='\t' '{print \$1,\$2,\$3,\$4}' ${bamf.baseName}.bed | sort -k1,1 -k2,2n -k3,3n > ${bamf.baseName}.bedsb
+	#Extract relevant metadata infos and sort for overlapping purposes (2)
+	${pythonbin} ${baseDir}/src/subset_metatada.py temp_file ${bamf.baseName}.bed
 	"""
 }
 
 
-/*S6*/
-process bed_exons_overlapping{
-	tag "${bedcds.baseName} /${fraction_rd}"
+/*S5*/
+process Bed_exons_overlapping{
+	tag "${bed.baseName} /${fraction_rd}"
 	publishDir "${params.publish_rep}/reads/overlap/", overwrite: true
 	maxForks params.cpu_defined
 	input:
 	val bedmapbin 					from params.bedmap_bin
 	file bed						from bed_ch
 	file exon_file					from exons_bedmap.collect()
-	file bedcds						from bed_coords
 	val fraction_rd 				from params.fraction_read_overlapping
 	output:
-	file "${bedcds.baseName}.bed_gtf"	into bed_gtf_ch
-	file "${bed}"						into bed_ch2
+	file "${bed.baseName}.bed_gtf"	into bed_gtf_ch
 	script:
 	"""
-	#Extract exon coords and sort (1)
-	#awk -v OFS='\t' '{if (NR!=1) {print \$1,\$2,\$3,\$6,\$9,\$11}}' ${bedcds.baseName}.exons | sort -k1,1 -k2,2n -k3,3n > exonsb
+	#mapped reads on exons bed (1)
+	${bedmapbin} --echo --echo-map-id --bp-ovr ${fraction_rd} --delim '\t' ${bed} ${bed.baseName}.exon_bedmap > ${bed.baseName}.bed_gtf
+	"""
+}
 
-	#mapped reads on exons bed (2)
-	${bedmapbin} --echo --echo-map --bp-ovr ${fraction_rd} --delim "****" ${bedcds} ${bedcds.baseName}.exon_bedmap > ${bedcds.baseName}.bed_gtf
+
+/*S6*/
+process Bed_exons_filtering{
+	tag "${ebed.baseName}"
+	publishDir "${params.publish_rep}/reads/overlap/", overwrite: true
+	maxForks params.cpu_defined
+	input:
+	val pythonbin								from params.python_bin
+	file ebed 									from bed_gtf_ch
+	file exon_file 								from exons_ch3.collect()
+	val trs_end_distance 						from params.dt_exon_end_threshold
+	output:
+	file "${ebed.baseName}.bed_gtf_filtered"	into bed_gtf_filtered
+	script:
+	"""
+	${pythonbin} ${baseDir}/src/filtering.py ${ebed} ${ebed.baseName}.exons ${trs_end_distance} ${ebed.baseName}.bed_gtf_filtered
 	"""
 }
 
 
 /*S7*/
-process bed_exons_filtering{
-	tag "${ebed.baseName}"	publishDir "${params.publish_rep}/reads/overlap/", overwrite: true
+process Split_ipdb_database{
+	tag "${ipdbf}"
 	maxForks params.cpu_defined
+	publishDir "${params.publish_rep}/ipdb_splitted", overwrite: true
 	input:
-	val pythonbin								from params.python_bin
-	file ebed 									from bed_gtf_ch
-	file bed 									from bed_ch2
-	file exon_file 								from exons_ch3.collect()
+	file ipdbf	from file(params.ipdb)
 	output:
-	file "${ebed.baseName}.bed_gtf_filtered"	into bed_gtf_filtered optional true
+	file "*"	into ipdb_splitted mode flatten
 	script:
 	"""
-	${pythonbin} ${baseDir}/src/overlapping_processing.py ${bed} ${ebed.baseName}.exons ${ebed} ${ebed.baseName}.bed_gtf_filtered
+	#Optionally remove the chr character in the file (1)
+	#sed 's/chr//' ${ipdbf} > nochr_ipdb
+
+	#select columns
+	awk -v OFS="\\t" '{print \$1,\$2,\$3,\$6}' ${ipdbf}  > nochr_ipdb2
+
+	#split by chromosome
+	gawk '{print > \$1".ipdb"}' nochr_ipdb2
+	rm nochr_ipdb2
+	#rm nochr_ipdb
 	"""
 }
 
 
 /*S8*/
-process bed_splicing_filtering{
+process Overlapping_ip_exons{
 	tag "${ebed.baseName}"
-	publishDir "${params.publish_rep}/reads/fragments/", overwrite: true
 	maxForks params.cpu_defined
+	publishDir "${params.publish_rep}/reads/ip_filtered/", overwrite: true
 	input:
-	val pythonbin									from params.python_bin
-	file ebed										from bed_gtf_filtered
-	val trs_distance								from params.dt_threshold
+	val pythonbin								from params.python_bin
+	val bedmapbin 								from params.bedmap_bin
+	file all_ips 								from ipdb_splitted.collect()
+	file ebed									from bed_gtf_filtered
+	file uniqs 									from exons_unique_ch.collect()
 	output:
-	file "${ebed.baseName}.bed_spliced_filtered"	into spliced_filtered_ch
+	file "${ebed.baseName}.ip_filtered" 					into exip_mapped, exip_mapped2
+	file "${ebed.baseName}.fragment_filtered_unique" 		into fragment_filtered_uniq_ch
+	file "${ebed.baseName}.ipp"								into ip_files_ch
+	file "${ebed.baseName}.rid"								into rid_files_ch
 	script:
 	"""
-	${pythonbin} ${baseDir}/src/splicing_filtering2.py ${ebed} ${trs_distance} ${ebed.baseName}.bed_spliced_filtered
-	"""
-}
+	#select exons columns in exon file
+	awk -v OFS="\\t" '{print \$1,\$10,\$11,\$8,\$5,\$15,\$14}' ${ebed} | sort -u > selected_exons.txt
 
+	#add index number to the ip file and arrange columns
+	nl ${ebed.baseName}.ipdb | awk -v OFS="\t" '{print \$2,\$3,\$4,\$1}' > selected_ipdb.txt
 
-/*S9*/
-process Internal_priming_filtering{
-	tag "${frag_file.baseName}"
-	publishDir "${params.publish_rep}/reads/fragments/", overwrite: true
-	maxForks params.cpu_defined
-	input:
-	val bedmapbin 											from params.bedmap_bin
-	val pythonbin											from params.python_bin
-	file frag_file											from spliced_filtered_ch
-	file exon_bd2											from exons_bedmap2.collect()
-	file exon_file											from exons_ch4.collect()
-	file ipn_file 											from ipdb_files.collect()
-	file gtf_uniq_file										from exons_unique_ch.collect()
-	output:
-	file "${frag_file.baseName}.fragment_filtered"			into fragment_filtered_ch1
-	file "${frag_file.baseName}.fragment_filtered_unique" 	into fragment_filtered_uniq_ch
-	file "${frag_file.baseName}.readid" 					into readid_filtered_ch
-	script:
-	"""
-	#extract exon coords and sort (1)
-	#awk -v OFS='\t' '{if (NR!=1) {print \$1,\$2,\$3,\$6,\$9,\$11}}' ${frag_file.baseName}.exons | sort -k1,1 -k2,2n -k3,3n | sed 's/chr//g' > exonsb
-	#sort -k1,1 -k2,2n -k3,3n ${frag_file.baseName}.ip_extracted > iptb
-	#in case we have a presence of chr character
-	#sed -i 's/chr//g' iptb
+	#merge exon_file
+	${bedmapbin} --echo --echo-map-id --fraction-map 0.9 --delim '\t' selected_exons.txt selected_ipdb.txt > ${ebed.baseName}.exip_mapped
 
-	${bedmapbin} --echo --echo-map --fraction-ref 1 --delim "****" ${frag_file.baseName}.ip_extracted ${frag_file.baseName}.exon_bedmap2 > ipsb
-	${pythonbin} ${baseDir}/src/internalp_filtering.py ${frag_file} ${frag_file.baseName}.exons ipsb ${frag_file.baseName}.exons_unique ${frag_file.baseName}.fragment_filtered  ${frag_file.baseName}.fragment_filtered_unique ${frag_file.baseName}.readid
+	#filter internal priming associated reads
+	${pythonbin} ${baseDir}/src/merge_ip_to_frags.py ${ebed} ${ebed.baseName}.exip_mapped ${ebed.baseName}.ipdb ${ebed.baseName}.exons_unique ${ebed.baseName}.ip_filtered  ${ebed.baseName}.ipp ${ebed.baseName}.fragment_filtered_unique
+	awk '{print \$4}' ${ebed.baseName}.ip_filtered | sort -u > ${ebed.baseName}.rid
 	"""
 }
 
@@ -454,39 +385,60 @@ process Probability_distribution{
 	file unique_files		from fragment_filtered_uniq_ch.collect()
 	output:
 	file "BINS_PROB.txt"	into probability_ch
-	file "BINS_PROB.jpeg"	into probability_pdf_file optional true
+	file "BINS_PROB.pdf"	into probability_pdf_file
 	script:
 	"""
-	${r_bin} ${baseDir}/src/compute_prob_distribution.R "\$PWD/" ${gfrac} ${bins} BINS_PROB.txt BINS_PROB.jpeg
+	${r_bin} ${baseDir}/src/compute_prob_distribution.R "\$PWD/" ${gfrac} ${bins} BINS_PROB.txt BINS_PROB.pdf
 	"""
 }
 
 
+
 /*S13*/
 process Fragment_probabilities{
-	tag "${fragment_file.baseName}"
-	publishDir "${params.publish_rep}/reads/cells/", overwrite: true
+	tag "${ebed.baseName}"
+	publishDir "${params.publish_rep}/reads/cells/chr_cells/", overwrite: true
 	input:
-	file fragment_file	from fragment_filtered_ch1.collect()
+	file ebed			from exip_mapped
 	file prob_file 		from probability_ch
 	output:
-	file "*.cell"	into cells_ch mode flatten
+	file "*.frag_prob"								into frags_channel
 	script:
 	"""
-	mkdir files
-	cp *.fragment_filtered  files/.
-	python3 ${baseDir}/src/fragment_probabilities.py "\$PWD/files/" ${prob_file}
+	#Write cell Files
+	python3 ${baseDir}/src/fragment_probabilities.py ${ebed} ${prob_file} ${ebed.baseName}.frag_prob
 	"""
 }
 
 
 /*S14*/
+process Cells_joining{
+	tag "${frag.baseName}"
+	publishDir "${params.publish_rep}/reads/cells/cells/", overwrite: true
+	input:
+	file frag				from frags_channel.collect()
+	output:
+	file "*.cell"			into cells_channel mode flatten
+	script:
+	"""
+	# merge all the frag files
+	# ************************
+	cat *.frag_prob > all_fragments.txt
+
+	# split the files
+	# ***************
+	awk -v OFS="\\t" '{print > \$1".cell"}' all_fragments.txt
+	"""
+}
+
+
+/*S15*/
 process EM_algorithm{
 	tag "${cell_file.baseName}"
-	publishDir "${params.publish_rep}/reads/prediction/", overwrite: true, mode:'copy'
-	maxForks 53
+	publishDir "${params.publish_rep}/reads/prediction/", overwrite: true
+	maxForks 40
 	input:
-	file cell_file	from cells_ch
+	file cell_file	from cells_channel
 	output:
 	file "${cell_file.baseName}.pred"	into prediction_ch
 	script:
@@ -496,91 +448,86 @@ process EM_algorithm{
 }
 
 
-/*S15*/
-process DGE_generation{
-	tag "${all_cells}"
-	publishDir "${params.publish_rep}/reads/apa_dge/", overwrite: true, mode: 'copy'
-
-	input:
-	file all_cells						from prediction_ch.collect()
-	file dge_mat						from file(params.dge_matrix)
-	output:
-	file "APADGE.txt"                   into apa_dge_file
-	file "ALL_predicted_cells"			into pred_file
-
-	script:
-	if (params.sequencing == "dropseq")
-		"""
-		#1- merge all the predicted cell files in an single One
-		#******************************************************
-		Rscript ${baseDir}/src/merge_pred_cells.R \$PWD ALL_predicted_cells
-
-		#Merge ALL cells prediction with DGE table
-		#*****************************************
-		python3 ${baseDir}/src/merge_DGE_PRED.py ALL_predicted_cells ${dge_mat} APADGE.txt
-		"""
-	else
-		"""
-		#preprocess h5 file
-		Rscript ${baseDir}/src/processh5.R ${dge_mat} DGE.txt
-
-		#1- merge all the predicted cell files in an single One
-		#******************************************************
-		Rscript ${baseDir}/src/merge_pred_cells.R \$PWD ALL_predicted_cells
-
-		#Merge ALL cells prediction with DGE table
-		#*****************************************
-		python3 ${baseDir}/src/merge_DGE_PRED.py ALL_predicted_cells DGE.txt APADGE.txt
-		"""
-}
-
-
 /*S16*/
-process outputSAM_filtering{
-	tag "${bam}"
+process Merge_predicted_cells{
+	tag "${all_preds}"
 	input:
-	val seqtype			from params.sequencing
-	val samtoolbin		from params.samtools_bin
-	file fragment 		from readid_filtered_ch
-	file bam 	  		from exonic_bams_ch2.collect()
+	file all_preds					from prediction_ch.collect()
 	output:
-	file "${fragment.baseName}.bam" into filtered_bam_ch
-
+	file "predicted_cells.txt"		into merged_pred_cells_ch
 	script:
 	"""
-	# 1- Extract header from BAM file and save
-	${samtoolbin} view -H ${fragment.baseName}.bamf > ${fragment.baseName}.samh
-
-	# 2- Convert BAM file into SAM (no header included)
-	${samtoolbin} view ${fragment.baseName}.bamf > ${fragment.baseName}.sam
-
-	# 3- Filter reads present in the fragment file into the sam file
-	python3 ${baseDir}/src/sam_filtering.py ${fragment.baseName}.sam ${fragment} ${seqtype} ${fragment.baseName}.sam_reads
-
-	# 3b - Merge header and reads
-	cat ${fragment.baseName}.sam_reads >> ${fragment.baseName}.samh
-
-	# 4- Transform into a bam file
-	${samtoolbin} view -b ${fragment.baseName}.samh > ${fragment.baseName}.bam
+	Rscript ${baseDir}/src/merge_pred_cells.R \$PWD predicted_cells.txt
 	"""
 }
 
 
 /*S17*/
-process INPUT_BAM_merging{
-	tag "${filtered_bams}"
-	publishDir "${params.publish_rep}/reads/filtered_bam", overwrite: true, mode: 'copy'
-
+process DGE_generation{
+	tag ""
+	publishDir "${params.publish_rep}/reads/apa_dge/", overwrite: true, mode: 'copy'
 	input:
-	val samtoolbin		from params.samtools_bin
-	file filtered_bams from filtered_bam_ch.collect()
+	file all_cells						from merged_pred_cells_ch
+	file dge_mat						from file(params.dge_matrix)
 	output:
-	file "final.bam"
+	file "APADGE.txt"                   into apa_dge_file
+	script:
+	if (params.sequencing == "dropseq")
+		"""
+		#Merge ALL cells prediction with DGE table
+		python3 ${baseDir}/src/merge_DGE_PRED.py ${all_cells} ${dge_mat} APADGE.txt
+		"""
+	else
+		"""
+		#preprocess h5 file
+		Rscript ${baseDir}/src/processh5.R ${dge_mat} DGE.txt
+		#Merge ALL cells prediction with DGE table
+		python3 ${baseDir}/src/merge_DGE_PRED.py ${all_cells} DGE.txt APADGE.txt
+		"""
+}
 
+
+/*S18*/
+process Filter_BAMS{
+	tag "${read_file.baseName}"
+	input:
+	file all_bams			from exonic_bams_ch2.collect()
+	file read_file 			from exip_mapped2
+	val samtoolbin			from params.samtools_bin
+	output:
+	file "${read_file.baseName}.ebamf"		into filtered_bams_ch
+	script:
 	"""
-	#Merge filtered BAM Files
-	#************************
-	${samtoolbin} merge -o FINAL.bam1 ${filtered_bams} -@ 20
-	${samtoolbin} sort -@ 20 FINAL.bam1 -O BAM -o final.bam
+	#get reads_id from ip filtered reads
+	python3 ${baseDir}/src/get_readid.py ${read_file} ${read_file.baseName}.rid
+	#filter bam file and indexing
+	${samtoolbin} view -b -N ${read_file.baseName}.rid ${read_file.baseName}.ebam > ${read_file.baseName}.ebamf
+	${samtoolbin} index ${read_file.baseName}.ebamf
 	"""
 }
+
+
+/*S19*/
+process Merge_BAMS{
+	publishDir "${params.publish_rep}/reads/filtered_bam/", overwrite: true, mode: 'copy'
+	input:
+	val samtoolbin			from params.samtools_bin
+	file all_bams			from filtered_bams_ch.collect()
+	output:
+	file "final.bam"
+	file "final.bam.bai"
+	script:
+	"""
+	#merge all the bams files
+	${samtoolbin} merge -o final1.bam ${all_bams}
+	${samtoolbin} sort final1.bam > final.bam
+	${samtoolbin} index final.bam
+	"""
+}
+
+
+
+
+
+
+

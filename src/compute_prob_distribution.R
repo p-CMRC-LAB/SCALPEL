@@ -6,8 +6,6 @@ library(data.table)
 library(ggplot2)
 library(argparse)
 library(scales)
-# library(distributionsrd)
-# library(fitdistrplus)
 
 
 
@@ -25,9 +23,13 @@ args = parser$parse_args()
 QUANTILE_THRESHOLD = args$GFRAC
 BINS = as.numeric(args$BINS)
 
+# QUANTILE_THRESHOLD = "80%"
+# BINS = 25
+
 #Files Opening (1)
 #*************
 #get list of of unique read file
+# files = list.files("~/CEPH/users/fake/projects/CHALLENGE_BRCNA_MADRID/iPSCs/scalpel_results/reads/ip_filtered/", pattern = "*.fragment_filtered_unique", full.names = T)
 files = list.files(args$PATH_OF_UNIQUE_TR, pattern = "*.fragment_filtered_unique", full.names = T)
 reads = parallel::mclapply(files, function(x) fread(x), mc.preschedule = T, mc.cores = 5)
 reads = do.call(rbind, reads)
@@ -39,73 +41,56 @@ genes_quants = genes_counts %>% quantile(seq(0,1,0.01))
 reads = reads %>% filter(gene_name %in% names(genes_counts[genes_counts<genes_quants[[QUANTILE_THRESHOLD]]]))
 
 #get distinct readid / 3end
-dtab = reads %>% distinct(read_id,dist_END) %>% arrange(dist_END)
+dtab = reads %>% distinct(frag_id,read_id,dist_END) %>% arrange(dist_END)
 dtab = table(dtab$dist_END) %>% data.table()
 dtab$V1 = as.numeric(dtab$V1)
 colnames(dtab) = c('transcriptomic_distance','counts')
 
-#create a table covering the whole transcriptomic space
-MIN = min(reads$dist_END)
-MAX = max(reads$dist_END)
-dtab_cov = data.table(data.frame(transcriptomic_distance = seq(MIN,MAX)))
-#merge
-merged = left_join(dtab_cov, dtab)
-merged$counts = merged$counts %>% tidyr::replace_na(0)
-#eliminate duplicates
-merged = merged %>% distinct(.keep_all=TRUE)
+#let's plot the fragments ends positions and reads
+# ggplot(dtab, aes(transcriptomic_distance, counts)) +
+#     geom_line() + geom_area(fill="cornflowerblue") + geom_smooth(span=0.05, color="red")
+# 
+# #let's fit a loass on the counts
+# dtab$loess = loess(counts~transcriptomic_distance, data=dtab, span=0.05)$fitted
 
-#plot
-# ggplot(merged, aes(transcriptomic_distance,counts)) +
-#   geom_point(size=1) +
-#   geom_line(size=0.5) +
-#   geom_smooth(span=0.30) +
-#   theme_bw()
-
-#breaks
-if(MIN < 0){
-	breaks = unique(c(-Inf,sort(unique(c(seq(0,MIN,-BINS),seq(0,MAX,BINS)))),MAX)); breaks
-}else{
-	breaks = unique(c(-Inf,sort(unique(c(seq(0,MAX,BINS)))),MAX)); breaks
+#let's set interval axis
+part_neg = c(seq(0,dtab$transcriptomic_distance[1],-BINS),dtab$transcriptomic_distance[1]) %>% unique() %>% rev()
+part_pos = c(seq(0, max(dtab$transcriptomic_distance), BINS), max(dtab$transcriptomic_distance)) %>% unique()
+intervals = unique(c(part_neg,part_pos))
+intervals_counts = list()
+intervals_idx = list()
+intervals_probs = list()
+for(i in 1:(length(intervals)-1)){
+    left_born = intervals[i]
+    right_born = intervals[i+1]
+    #index
+    intervals_idx[[i]] = seq(left_born, right_born)
+    #counts
+    intervals_counts[[i]] = rep((dtab %>% filter(transcriptomic_distance>= left_born & transcriptomic_distance < right_born))$counts %>% sum(), length(intervals_idx[[i]]))
 }
+interval.tab = data.table(transcriptomic_distance = unlist(intervals_idx), counts_cum = unlist(intervals_counts)) %>% distinct(transcriptomic_distance,.keep_all = T)
+interval.tab$probs_bin = (interval.tab$counts_cum / sum(interval.tab$counts_cum)) * 100
+interval.tab = left_join(interval.tab, dtab)
+interval.tab$counts = interval.tab$counts %>% tidyr::replace_na(0)
+#let's normalize
+# interval.tab$counts_normalized = interval.tab$counts %>% scales::rescale(to = c(0,max(interval.tab$loess)))
+interval.tab$probability_scaled = interval.tab$probs_bin %>% scales::rescale(to = c(0,max(interval.tab$counts)))
+# interval.tab$loess_scaled = interval.tab$loess %>% scales::rescale(to=c(0,100))
+interval.tab$loess = loess(counts~transcriptomic_distance, data = interval.tab, span = 0.1, weights = interval.tab$probs_bin)$fitted %>% scales::rescale(to=c(0,max(interval.tab$counts)))
+# interval.tab$loess_normalized = interval.tab$loess %>% scales::rescale(to = c(0,100))
+# interval.tab
 
-#get probability distribution on BINS intervals
-merged.2 = do.call(rbind, lapply(1:(length(breaks)-1), function(x){
-  A = breaks[x]
-  B = breaks[x+1]
-  ends = merged$transcriptomic_distance[(merged$transcriptomic_distance>A) & (merged$transcriptomic_distance<=B)]
-  if(length(ends)==0){ends = B}
-  ends_counts = merged$counts[merged$transcriptomic_distance %in% ends]
-  if(length(ends_counts)==0){ends = 0}
-  return(data.frame(transcriptomic_distance = ends,bin_counts = sum(ends_counts)))
-}))
-merged.2 = merged.2 %>% distinct(transcriptomic_distance, .keep_all=TRUE)
+ggplot(interval.tab) +
+    geom_area(aes(transcriptomic_distance,counts), fill="cornflowerblue", size=0.5) +
+    geom_line(aes(transcriptomic_distance,loess), color="gray20", color="red", size=1) +
+    geom_line(aes(transcriptomic_distance,probability_scaled), color="red",size=1) +
+    theme_classic() +
+    ggtitle("Fragments distribution on transcriptomic space")
+ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, height = 8.27)
 
-#final_merging
-merged.final = left_join(merged.2, merged) %>% data.table(); merged.final
-
-#final scaling
-merged.final$bin_counts_pb = merged.final$bin_counts / sum(merged.final$bin_counts)
-merged.final$probability_normalized = merged.final$bin_counts_pb %>% scales::rescale(to=c(0,1))
-merged.final$counts_normalized = merged.final$counts %>% scales::rescale(to=c(0,1))
-merged.final = merged.final[,c('transcriptomic_distance','counts','bin_counts_pb','counts_normalized','probability_normalized','bin_counts')]
-colnames(merged.final) = c('transcriptomic_distance','counts','probs_bin','counts_normalized','probability_normalized','bin_counts')
-merged.final$probs_bin = merged.final$probs_bin * 100
-
-merged.loess = loess(probs_bin~transcriptomic_distance, data = merged.final[merged.final$transcriptomic_distance>=0], span = 0.05)
-merged.final$loess = 0
-merged.final$loess[merged.final$transcriptomic_distance>=0] = merged.loess$fitted
-
-
-#plot
-ggplot(merged.final) +
-  geom_line(aes(transcriptomic_distance,probability_normalized, col='bins distribution')) +
-  geom_line(aes(transcriptomic_distance,loess, col='loess fitting of bins distribution')) +
-  geom_line(aes(transcriptomic_distance,counts_normalized, col='read counts')) +
-  theme_bw(base_size = 15)
-
-
-#writing
-merged.final$loess = merged.final$loess * 100
-merged.final$probs_bin = merged.final$loess
-ggsave(args$OUTPUT_PDF, scale = 2, device = "jpeg")
-fwrite(merged.final[,c('transcriptomic_distance','counts','probs_bin','counts_normalized','probability_normalized')], file = args$OUTPUT_PROB, sep="\t")
+# [Writing]
+# --------
+interval.tab$probs_bin = interval.tab$loess
+ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, height = 8.27)
+fwrite(interval.tab[,c('transcriptomic_distance','counts','probs_bin')], file = args$OUTPUT_PROB, sep="\t", col.names = F)
+# fwrite(interval.tab[,c('transcriptomic_distance','counts','probs_bin','counts_normalized','probability_normalized')], file = args$OUTPUT_PROB, sep="\t")

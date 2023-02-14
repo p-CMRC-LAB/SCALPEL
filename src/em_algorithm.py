@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 import argparse
+import vaex as vx
 from IPython.display import display
 
 
@@ -17,52 +18,69 @@ args = parser.parse_args()
 #Functions
 #*********
 def posterior(probs, tr_estimates):
-	#function to impute transcript relative estimate abundances
+	'''
+	Function to impute transcript relative estimate abundances
+	'''
 	numerator = (probs * tr_estimates)
-	#display(numerator)
-	#display(sum(numerator))
-	#return(numerator/sum(numerator))
 	return(numerator.div(numerator.sum(axis=1).values[0]))
 
-def em_algorithm(tab, max_iteration=100):
-	#function to comupte em algorithm on transcript table
-	if len(tab) == 0:
-		return np.nan
+def em_algorithm(tab, max_iteration=50):
+	'''
+	Function to comupte em algorithm on transcript table
+	'''
+	#number of trs
+	tr_size = len(tab.transcript_name.unique())
+
+	#get initial estimated abundances starter
+	estimated_abundances = np.round([1/tr_size] * tr_size, 2)
+	buffer = estimated_abundances
+	#pivot_table
+	tab = tab.pivot_table(index='umi',columns='transcript_name',values='frag_prob_weighted', fill_value=0)
+	#Iterate until convergence (EM standard)
+	for i in range(max_iteration):
+		#get posterior probs
+		estimated_abundances = np.round((tab.groupby('umi').apply(lambda x: posterior(x, estimated_abundances))).mean(axis=0),2)
+		#keep track if different... else stop
+		if np.array_equal(estimated_abundances, buffer):
+			return(estimated_abundances)
+		else:
+			buffer = estimated_abundances
+	return(estimated_abundances)
+
+
+def isoform_abundances(gene_tab, gene):
+	'''
+	Function to get the isoform relative abundances
+	'''
+	#check if the tab contain an unique transcript,... so prob = 1
+	if len(gene_tab.transcript_name.unique()) == 1:
+		return([gene,gene_tab.transcript_name.unique().tolist(),[1]])
 	else:
-		#get initial estimated abundances starter
-		estimated_abundances = [1/tab.shape[1]] * tab.shape[1]
-		buffer = estimated_abundances
-		#Iterate
-		for i in range(max_iteration):
-			#get posterior probs
-			#display(tab)
-			#post_probs = tab.apply(lambda row: posterior(row, estimated_abundances), axis=1)
-			post_probs = tab.groupby('umi').apply(lambda x: posterior(x, estimated_abundances))
-			#get transcript relative coord estimate
-			estimated_abundances = np.round((post_probs.mean(axis=0).values),2)
-			#keep track if different else stop
-			if False not in (buffer == estimated_abundances):
-				return(estimated_abundances.tolist())
-			else:
-				buffer = estimated_abundances
-		return(estimated_abundances.tolist())
+		#go into the em alogorithm
+		return [gene,gene_tab.transcript_name.unique().tolist(),em_algorithm(gene_tab).tolist()]
 
 
-#Cell file opening
-cell = pd.read_csv(args.cell_path, sep='\t')
-cell['frag_prob_weighted'] = cell.probs_bin * cell.salmon_rlp.astype('float') * 1e5
+# Cell file opening
+# -----------------
+print("opening file")
+cell = pd.read_csv(args.cell_path, sep='\t', names=['bc','gene_name','gene_id','transcript_name','transcript_id','salmon_rlp','umi','frag_id','probs_bin'], header=None)
+cell['frag_prob_weighted'] = cell.probs_bin * cell.salmon_rlp.astype('float')
 cell = cell.astype({'gene_name':'str'})
 
-#EM algorithm
-print('looping')
-cell = cell.astype({'gene_name':'str', 'transcript_name':'str'})
-cell = cell.dropna()
-res = [[tab[1].transcript_name.unique().tolist(), em_algorithm(tab[1][['umi','transcript_name','frag_prob_weighted']].pivot_table(index='umi',columns='transcript_name',values='frag_prob_weighted', fill_value=0))] for tab in cell.groupby('gene_name')]
-res = pd.DataFrame(res).dropna()
-display(res)
-res.columns = ['transcript_name','tr_prob']
-res = res.explode(['transcript_name','tr_prob'])
-res = cell.merge(res, on='transcript_name', how='left')
+# select columns
+# --------------
+intab = cell[['gene_name','umi','transcript_name','frag_prob_weighted']]
+intab = intab.sort_values(["gene_name","transcript_name"])
 
-#writing
-res.to_csv(args.output_path, sep='\t', index=False, doublequote=False)
+
+# Calulate isoform relatives abundances
+# -------------------------------------
+res = pd.DataFrame([isoform_abundances(group[1], group[0]) for group in intab.groupby("gene_name")])
+res.columns = ["gene_name","transcript_name","tr_prob"]
+res = res.explode(["transcript_name","tr_prob"])
+res = ((cell[['bc','gene_name','gene_id','transcript_name','transcript_id']]).drop_duplicates()).merge(res, on=['transcript_name','gene_name'], how='left')
+
+# writing
+# -------
+print("writing")
+res.to_csv(args.output_path, sep="\t", header=False, index=False)
