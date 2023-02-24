@@ -146,6 +146,7 @@ if (params.salmon_index == null) {
 	/*Quantification of transcripts for samples provided*/
 	process salmon_quantification1{
 		tag "${sample}, ${salmon_idx}"
+		maxForks params.cpu_defined
 		publishDir "${params.publish_rep}/salmon_quant/", overwrite: true
 		input:
 		val sample from samples_ch
@@ -172,6 +173,7 @@ if (params.salmon_index == null) {
 	/*Quantification of transcripts for samples provided*/
 	process salmon_quantification2{
 		tag "${sample}, ${salmon_idx}"
+		maxForks params.cpu_defined
 		publishDir "${params.publish_rep}/salmon_quant/", overwrite: true
 		input:
 		val sample from samples_ch
