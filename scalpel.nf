@@ -397,6 +397,7 @@ process Probability_distribution{
 /*S13*/
 process Fragment_probabilities{
 	tag "${ebed.baseName}"
+	maxForks params.cpu_defined
 	publishDir "${params.publish_rep}/reads/cells/chr_cells/", overwrite: true
 	input:
 	file ebed			from exip_mapped
@@ -414,6 +415,7 @@ process Fragment_probabilities{
 /*S14*/
 process Cells_joining{
 	tag "${frag.baseName}"
+	maxForks params.cpu_defined
 	publishDir "${params.publish_rep}/reads/cells/cells/", overwrite: true
 	input:
 	file frag				from frags_channel.collect()
@@ -436,7 +438,7 @@ process Cells_joining{
 process EM_algorithm{
 	tag "${cell_file.baseName}"
 	publishDir "${params.publish_rep}/reads/prediction/", overwrite: true
-	maxForks 40
+	maxForks params.cpu_defined
 	input:
 	file cell_file	from cells_channel
 	output:
@@ -490,6 +492,7 @@ process DGE_generation{
 /*S18*/
 process Filter_BAMS{
 	tag "${read_file.baseName}"
+	maxForks params.cpu_defined
 	input:
 	file all_bams			from exonic_bams_ch2.collect()
 	file read_file 			from exip_mapped2
