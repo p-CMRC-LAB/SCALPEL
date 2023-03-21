@@ -215,7 +215,7 @@ def remove_sim_exons(tab, distance_thr, exon_thr):
 
 	#Here, check than a gene does contains a last exon. An error can occur if the gene does not have a last exon (exon number == 1)
 	if len(tab[tab.exon_number==1]) == 0:
-		#exit("Error: Gene " + tab.gene_name.tolist()[0] + " does not contain a last exon [exon_number==1]. Check input format of GTF file !!!")
+		warnings.warn("Error: Gene " + tab.gene_name.tolist()[0] + " does not contain a last exon [exon_number==1]. Check input format of GTF file !!!")
 		return(None)
 
 	# Get list of similar transcripts in last exon
