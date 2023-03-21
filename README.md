@@ -46,9 +46,8 @@ To get a local copy up and running follow these simple example steps.
    
    Another solution (if conda installation takes long) can be to create a Conda environment, install Mamba (faster implementation of Conda) and install the packages using mamba:
    ```sh
-   conda create --name scalpel_env python>=3.9
+   conda create --name scalpel_env -c conda-forge -c bioconda mamba python=3.9
    conda activate scalpel_env
-   conda install -c conda-forge mamba
    mamba install -c bioconda -c defaults -c conda-forge --file SCALPEL/requirements.txt
    ```
 
