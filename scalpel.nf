@@ -46,13 +46,13 @@ params.chr_concordance = ''
 
 /*Some params initilialization*/
 params.dt_threshold = 600
-params.dt_exon_end_threshold = 30
+params.dt_exon_end_threshold = 20
 params.cpu_defined = 50
 params.mt_remove = 1
 params.fraction_read_overlapping = 2
 params.subsampling = 1
-params.gene_fraction = "80%"
-params.binsize = 25
+params.gene_fraction = "90%"
+params.binsize = 15
 
 
 if ( params.help )
@@ -215,7 +215,7 @@ process Chromosome_processing{
 	file "${chr_file.baseName}.exon_bedmap"		into exons_bedmap
 	script:
 	"""
-	${pythonbin} ${baseDir}/src/exon_processing.py ${chr_file}  ${trs_distance} ${trs_end_distance}  ${chr_file.baseName}.exons ${chr_file.baseName}.exons_unique ${chr_file.baseName}.exon_bedmap ${chr_file.baseName}.exon_bedmap2
+	${pythonbin} ${baseDir}/src/exon_processing.py ${chr_file}  ${trs_distance} ${trs_end_distance}  ${chr_file.baseName}.exons ${chr_file.baseName}.exons_unique ${chr_file.baseName}.exon_bedmap
 	"""
 }
 
@@ -240,16 +240,17 @@ process Bam_splitting{
 	file "${chr_id}.ebam"	into exonic_bams_ch, exonic_bams_ch2
 
 	script:
-	if(params.sequencing == "dropseq")
+	if( params.sequencing == "dropseq" )
 		"""
 		#Dropseq
 		#Filter reads and split by chromosome
-		${samtoolbin} view -b --subsample ${subsamp} ${bam_file} ${chrc}${chr_id.baseName} -D XC:${barcodes_file} --keep-tag "XC,XM" > ${chr_id}.ebam
+		zcat -f ${barcodes_file} > bc.txt
+		${samtoolbin} view -b --subsample ${subsamp} ${bam_file} ${chrc}${chr_id.baseName} -D XC:bc.txt --keep-tag "XC,XM" > ${chr_id}.ebam
 		"""
 	else
 		"""
 		#10X SEQ
-		zcat ${barcodes_file} > bc.txt
+		zcat -f ${barcodes_file} > bc.txt
 		${samtoolbin} view -b --subsample ${subsamp} ${bam_file} ${chrc}${chr_id.baseName} -D CB:bc.txt --keep-tag "CB,UB" > ${chr_id}.ebam
 		"""
 }
@@ -398,6 +399,7 @@ process Probability_distribution{
 process Fragment_probabilities{
 	tag "${ebed.baseName}"
 	publishDir "${params.publish_rep}/reads/cells/chr_cells/", overwrite: true
+	maxForks params.cpu_defined
 	input:
 	file ebed			from exip_mapped
 	file prob_file 		from probability_ch
@@ -415,6 +417,7 @@ process Fragment_probabilities{
 process Cells_joining{
 	tag "${frag.baseName}"
 	publishDir "${params.publish_rep}/reads/cells/cells/", overwrite: true
+	maxForks params.cpu_defined
 	input:
 	file frag				from frags_channel.collect()
 	output:
@@ -436,7 +439,7 @@ process Cells_joining{
 process EM_algorithm{
 	tag "${cell_file.baseName}"
 	publishDir "${params.publish_rep}/reads/prediction/", overwrite: true
-	maxForks 40
+	maxForks params.cpu_defined
 	input:
 	file cell_file	from cells_channel
 	output:
@@ -451,6 +454,7 @@ process EM_algorithm{
 /*S16*/
 process Merge_predicted_cells{
 	tag "${all_preds}"
+	maxForks params.cpu_defined
 	input:
 	file all_preds					from prediction_ch.collect()
 	output:
@@ -519,7 +523,7 @@ process Merge_BAMS{
 	script:
 	"""
 	#merge all the bams files
-	${samtoolbin} merge -o final1.bam ${all_bams}
+	${samtoolbin} merge -f -o final1.bam ${all_bams}
 	${samtoolbin} sort final1.bam > final.bam
 	${samtoolbin} index final.bam
 	"""

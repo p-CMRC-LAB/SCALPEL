@@ -16,7 +16,7 @@ parser.add_argument('cross_threshold', type=int, default=sys.stdin, help='transc
 parser.add_argument('output_path', metavar='Bmfip', type=str, help='path of output bed file')
 args = parser.parse_args()
 
-CROSS_THRESHOLD = 5
+CROSS_THRESHOLD = 50
 
 # [import file]
 # -------------

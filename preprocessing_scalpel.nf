@@ -147,6 +147,7 @@ if (params.salmon_index == null) {
 	process salmon_quantification1{
 		tag "${sample}, ${salmon_idx}"
 		publishDir "${params.publish_rep}/salmon_quant/", overwrite: true
+		maxForks params.cpu_defined
 		input:
 		val sample from samples_ch
 		val salmon_path from params.salmon_path_bin
@@ -173,6 +174,7 @@ if (params.salmon_index == null) {
 	process salmon_quantification2{
 		tag "${sample}, ${salmon_idx}"
 		publishDir "${params.publish_rep}/salmon_quant/", overwrite: true
+		maxForks params.cpu_defined
 		input:
 		val sample from samples_ch
 		val salmon_path from params.salmon_path_bin
@@ -199,6 +201,7 @@ if (params.salmon_index == null) {
 process quantification_processing{
 	tag "${quant}"
 	publishDir "${params.publish_rep}/", overwrite: true, mode: 'copy'
+	maxForks params.cpu_defined
 	input:
 	file quant from quant_files_ch.collect()
 	output:

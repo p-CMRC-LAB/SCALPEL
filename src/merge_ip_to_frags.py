@@ -1,5 +1,4 @@
 
-
 import argparse
 import pandas as pd
 import numpy as np
@@ -18,7 +17,7 @@ parser.add_argument('output_path_ipp', metavar='Bmfip', type=str, help='path of 
 parser.add_argument('output_bed_unique', metavar='Bmfip', type=str, help='path of output filtered bed unique file')
 args = parser.parse_args()
 
-
+THRESHOLD_SCAN = 200
 
 # [import file] (1)
 # -------------
@@ -42,7 +41,6 @@ del exips['chr_ip']
 
 # Let's discard the IP position in the are of a transcript END [threshold] (3)
 # ------------------------------------------------------------
-THRESHOLD_SCAN = 200
 exips["dEND"] = np.where(exips.Strand == "-", exips.Start_ip - exips.Start, exips.End - exips.End_ip)
 exips = exips[~((exips.exon_number==1) & (exips.dEND < THRESHOLD_SCAN))]
 exips = exips[~exips.Start_ip.isnull()]
@@ -53,7 +51,6 @@ exips.columns = ["chr","Start","End","exon_id","Strand","exon_number","transcrip
 
 # [Now deal with internal priming filtering] (3)
 # -------------------------------------------
-
 reads = reads.merge(exips[["chr","Strand","transcript_name","Start_ip","End_ip","dEND"]], on=["chr","Strand","transcript_name"], how="left")
 reads["fidt"] = reads.frag_id + "_" + reads.transcript_name
 
@@ -75,7 +72,9 @@ reads = reads.drop_duplicates()
 
 # Filter reads associated to genes with unique transcripts
 # -------------------------------------------------------
-reads_uniq = reads[reads.gene_name.isin(gtf_unique.gene_name)]
+reads_unique = reads[["gene_name","transcript_name"]].drop_duplicates().groupby("gene_name").count().reset_index(drop=False)
+reads_unique = reads_unique[reads_unique.transcript_name == 1]
+reads_uniq = reads[reads.gene_name.isin(reads_unique.gene_name)]
 
 
 # Writing

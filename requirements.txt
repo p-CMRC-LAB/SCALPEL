@@ -14,3 +14,4 @@ samtools>=1.14
 pyranges
 salmon
 vaex
+gawk

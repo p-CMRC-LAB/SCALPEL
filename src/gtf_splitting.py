@@ -42,18 +42,27 @@ print('gtf opening...')
 gtf = gtf[(gtf.Feature=='exon') & (gtf.gene_type.isin(['protein_coding','processed_pseudogene','transcribed_unprocessed_pseudogene','lncRNA']))]
 gtf = gtf[['Chromosome','Start','End','Strand','gene_id','gene_name','gene_type','transcript_id','transcript_name','transcript_type','exon_number','exon_id']]
 
+
 # (4) Compute transcripts salmon relative probabilities...
+# filter qf based on transcript_id present in gtf
+print("merging qantification and gtf tab1...")
+qf = qf[qf.transcript_id.isin(gtf.transcript_id)]
 if 'gene_name' not in  qf.columns:
-	qf = pd.merge(qf, gtf[['transcript_id','gene_name']], on='transcript_id', how='right').drop_duplicates()
+	qf = pd.merge(qf, gtf[['transcript_id','gene_name']], on='transcript_id', how='left').drop_duplicates()
 	qf = qf.dropna()
 
 def rlp_transcripts(tab):
 	tab['salmon_rlp'] = tab.NumReads / tab.NumReads.sum()
 	return(tab)
+print("calulcating read fract...")
 qf = qf.groupby('gene_name').apply(lambda x: rlp_transcripts(x))
 
+
 # (5) Merge salmon quantification...
-gtf = pd.merge(gtf, qf[['transcript_id','length','NumReads','salmon_rlp']], on=['transcript_id'], how='right').drop_duplicates()
+print("merging qantification and gtf tab2...")
+gtf = gtf[gtf.transcript_id.isin(qf.transcript_id)]
+gtf = pd.merge(gtf, qf[['transcript_id','length','NumReads','salmon_rlp']], on=['transcript_id'], how='left').drop_duplicates()
+
 
 # (6) Discard Ribosomical genes...
 genes_names = gtf['gene_name']

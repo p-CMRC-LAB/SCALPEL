@@ -23,13 +23,10 @@ args = parser$parse_args()
 QUANTILE_THRESHOLD = args$GFRAC
 BINS = as.numeric(args$BINS)
 
-# QUANTILE_THRESHOLD = "80%"
-# BINS = 25
 
 #Files Opening (1)
 #*************
 #get list of of unique read file
-# files = list.files("~/CEPH/users/fake/projects/CHALLENGE_BRCNA_MADRID/iPSCs/scalpel_results/reads/ip_filtered/", pattern = "*.fragment_filtered_unique", full.names = T)
 files = list.files(args$PATH_OF_UNIQUE_TR, pattern = "*.fragment_filtered_unique", full.names = T)
 reads = parallel::mclapply(files, function(x) fread(x), mc.preschedule = T, mc.cores = 5)
 reads = do.call(rbind, reads)
@@ -49,9 +46,6 @@ colnames(dtab) = c('transcriptomic_distance','counts')
 #let's plot the fragments ends positions and reads
 # ggplot(dtab, aes(transcriptomic_distance, counts)) +
 #     geom_line() + geom_area(fill="cornflowerblue") + geom_smooth(span=0.05, color="red")
-# 
-# #let's fit a loass on the counts
-# dtab$loess = loess(counts~transcriptomic_distance, data=dtab, span=0.05)$fitted
 
 #let's set interval axis
 part_neg = c(seq(0,dtab$transcriptomic_distance[1],-BINS),dtab$transcriptomic_distance[1]) %>% unique() %>% rev()
@@ -72,25 +66,21 @@ interval.tab = data.table(transcriptomic_distance = unlist(intervals_idx), count
 interval.tab$probs_bin = (interval.tab$counts_cum / sum(interval.tab$counts_cum)) * 100
 interval.tab = left_join(interval.tab, dtab)
 interval.tab$counts = interval.tab$counts %>% tidyr::replace_na(0)
-#let's normalize
-# interval.tab$counts_normalized = interval.tab$counts %>% scales::rescale(to = c(0,max(interval.tab$loess)))
+#let's normalize for visualization
 interval.tab$probability_scaled = interval.tab$probs_bin %>% scales::rescale(to = c(0,max(interval.tab$counts)))
-# interval.tab$loess_scaled = interval.tab$loess %>% scales::rescale(to=c(0,100))
-interval.tab$loess = loess(counts~transcriptomic_distance, data = interval.tab, span = 0.1, weights = interval.tab$probs_bin)$fitted %>% scales::rescale(to=c(0,max(interval.tab$counts)))
-# interval.tab$loess_normalized = interval.tab$loess %>% scales::rescale(to = c(0,100))
-# interval.tab
+#interval.tab$loess = loess(counts~transcriptomic_distance, data = interval.tab, span = 0.1, weights = interval.tab$probs_bin)$fitted %>% scales::rescale(to=c(0,max(interval.tab$counts)))
 
 ggplot(interval.tab) +
     geom_area(aes(transcriptomic_distance,counts), fill="cornflowerblue", size=0.5) +
-    geom_line(aes(transcriptomic_distance,loess), color="gray20", color="red", size=1) +
+#    geom_line(aes(transcriptomic_distance,loess), color="gray20", color="red", size=1) +
     geom_line(aes(transcriptomic_distance,probability_scaled), color="red",size=1) +
     theme_classic() +
     ggtitle("Fragments distribution on transcriptomic space")
 ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, height = 8.27)
 
+
 # [Writing]
 # --------
-interval.tab$probs_bin = interval.tab$loess
+#interval.tab$probs_bin = interval.tab$loess
 ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, height = 8.27)
 fwrite(interval.tab[,c('transcriptomic_distance','counts','probs_bin')], file = args$OUTPUT_PROB, sep="\t", col.names = F)
-# fwrite(interval.tab[,c('transcriptomic_distance','counts','probs_bin','counts_normalized','probability_normalized')], file = args$OUTPUT_PROB, sep="\t")

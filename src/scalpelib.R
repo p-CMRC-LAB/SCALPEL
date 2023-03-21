@@ -42,7 +42,7 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
     b = apply(a,2, function(x) x/sum(x))
     c = a[names(which(rowSums(b > threshold_tr_abundance) >= 1)),]
     if(nrow(c) > 1){
-      d = chisq.test(c)
+      d = chisq.test(c, correct = TRUE, simulate.p.value = TRUE)
       c$gene = x
       c$p_value = d$p.value
       return(list(c, d))
@@ -71,11 +71,10 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
 
 
 
-
 CoveragePlot = function(genome, gene_in=NULL, transcripts_in=NULL, bamfiles=NULL, bamnames=NULL,
                         transcritps_showed = "scalpel", seurat.obj=NULL, genome_gr="hg38",
                         condition="orig.ident", left_space=500, rigth_space=500, tr_position="below",
-                        cex.tr_name=1.5, scale = TRUE, type_data=c("coverage"), check_ip_pos = FALSE, scalpel_results=NULL){
+                        cex.tr_name=1.5, scale = TRUE, type_data=c("coverage"), check_ip_pos = FALSE, scalpel_results=NULL, ip_PATH=NULL){
   # --------------------------------
   # Function to plot isoforms coverage
   # --------------------------------
@@ -95,6 +94,12 @@ CoveragePlot = function(genome, gene_in=NULL, transcripts_in=NULL, bamfiles=NULL
   #1/ Preprocess genome tab
   #filter exons
   genome = genome[genome$type == "exon",]
+
+  #check columns names issues
+  colnames(genome) = str_replace(colnames(genome),"gene_biotype","gene_type")
+  colnames(genome) = str_replace(colnames(genome),"transcript_biotype","transcript_type")
+
+  #selection
   genome = genome[,c("seqnames","start","end","width","strand","gene_type","gene_id",
                      "exon_id","transcript_id","gene_name","transcript_name")]
   #rename
@@ -115,6 +120,7 @@ CoveragePlot = function(genome, gene_in=NULL, transcripts_in=NULL, bamfiles=NULL
   if(is.null(transcripts_in)){
     print("No specific filtering of input transcripts...")
   }else{
+    print("filtering transcripts...")
     gene_tab = gene_tab %>% filter(transcript_name %in% transcripts_in)
   }
   gene_tab$symbol = gene_tab$transcript_name
@@ -123,6 +129,7 @@ CoveragePlot = function(genome, gene_in=NULL, transcripts_in=NULL, bamfiles=NULL
   start_gene = min(gene_tab$start)
   end_gene = max(gene_tab$end)
   strand_gene = gene_tab$strand[1]
+  print(CHR)
 
   
   #2/ Create GeneTrack for Gviz
@@ -134,16 +141,25 @@ CoveragePlot = function(genome, gene_in=NULL, transcripts_in=NULL, bamfiles=NULL
 
   #Bis Create Annotation track if ip db
   atrack = AnnotationTrack(name = "IP", background.title = "cornflowerblue")
-  if(check_ip_pos==TRUE & (!(is.null(scalpel_results)))){
+  if(check_ip_pos==TRUE){
+    print("process ip table...")
     #read ip table
     iptab = fread(paste0(scalpel_results,"/reads/ip_filtered/",CHR,".ipp"),sep="\t")
+    # iptab = fread(ip_PATH, sep="\t")
+    # colnames(iptab) = c("chr_ipn","Start_ip","End_ip","c4","c5","Strand_ip")
     #filter based on coordinates and strand
+    print(iptab)
+    print(min(gene_tab$start))
+    print(max(gene_tab$end))
     iptab = iptab %>% dplyr::filter(Start_ip>min(gene_tab$start) & Start_ip<max(gene_tab$end))
+    print(iptab)
     if(nrow(iptab)==0){
       atrack = AnnotationTrack(, name = "IP", background.title = "cornflowerblue")
     }else{
       atrack = AnnotationTrack(start = iptab$Start_ip, end = iptab$End_ip, chromosome = CHR, strand = rep(strand_gene,nrow(iptab)), genone = genome_gr, name = "IP", background.title = "cornflowerblue")
     }
+  }else{
+    print("ip position not printed !")
   }
 
   
@@ -159,17 +175,15 @@ CoveragePlot = function(genome, gene_in=NULL, transcripts_in=NULL, bamfiles=NULL
       param = Rsamtools::ScanBamParam(which = GenomicRanges::GRanges(seqnames = CHR, ranges = IRanges::IRanges(start_gene, width = end_gene - start_gene + 0), strand = strand_gene))
       dtracks_res = lapply(1:length(bamfiles), function(x){
         print(bamfiles[x])
-        #readBAM file
         covrg = GenomicAlignments::coverage(bamfiles[x], param=param)[[CHR]]
         coverage_reads = (runValue(covrg))
-        # dtrack = DataTrack(start=start(covrg), end = end(covrg), data = coverage_reads, type=c('h'), genome = genome_gr, chromosome = CHR,
-        # 					name = bamnames[x], cex.legend=10, cex=10, fontsize.legend=10)
-        max_val = max(coverage_reads)
-      	dtrack_in = AlignmentsTrack(bamfiles[x], chromosome=CHR, genome=genome_gr, name=bamnames[x], stacking="pack", background.title = "black")
+        max_val = max((coverage_reads / sample_sizes[x]) * 100)
+      	dtrack_in = AlignmentsTrack(bamfiles[x], chromosome=CHR, genome=genome_gr, name=bamnames[x], background.title = "black", transformation = function(y) { (y/sample_sizes[x]) * 100}, from=min(gene_tab$start), to=max(gene_tab$end))
         return(list(max_val, dtrack_in))
       })
       dtracks = unlist(lapply(dtracks_res, function(x) x[2]))
       max_y = max(unlist(lapply(dtracks_res, function(x) x[1])))
+      print(max_y)
       
       #Plotting
       options(ucscChromosomeNames=FALSE)
@@ -179,11 +193,11 @@ CoveragePlot = function(genome, gene_in=NULL, transcripts_in=NULL, bamfiles=NULL
       
       #tracks
       if (scale == TRUE){
-        plotTracks(c(dtracks, atrack, gtrack), from = min(gene_tab$start) - EXTRA.L, to = max(gene_tab$end) + EXTRA.R, type = type_data, ylim=c(0,max_y), 
-          sizes = c(rep(0.3, length(dtracks)),0.1,0.5))
+        return(plotTracks(c(dtracks, atrack, gtrack), from = min(gene_tab$start) - EXTRA.L, to = max(gene_tab$end) + EXTRA.R, type = type_data, ylim=c(0,max_y), 
+          sizes = c(rep(1, length(dtracks)),0.1,1)))
         }else{
-          plotTracks(c(dtracks, atrack, gtrack), from = min(gene_tab$start) - EXTRA.L, to = max(gene_tab$end) + EXTRA.R, type = type_data, 
-          sizes = c(rep(0.5, length(dtracks)),0.1,2))
+          return(plotTracks(c(dtracks, atrack, gtrack), from = min(gene_tab$start) - EXTRA.L, to = max(gene_tab$end) + EXTRA.R, type = type_data, 
+          sizes = c(rep(1, length(dtracks)),0.1,1)))
         }
     },
     error = function(e){

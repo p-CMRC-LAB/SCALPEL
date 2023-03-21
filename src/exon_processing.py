@@ -212,6 +212,12 @@ def remove_sim_exons(tab, distance_thr, exon_thr):
 	to_discard = []
 
 	max_exnumber = max(tab.exon_number.tolist())
+
+	#Here, check than a gene does contains a last exon. An error can occur if the gene does not have a last exon (exon number == 1)
+	if len(tab[tab.exon_number==1]) == 0:
+		#exit("Error: Gene " + tab.gene_name.tolist()[0] + " does not contain a last exon [exon_number==1]. Check input format of GTF file !!!")
+		return(None)
+
 	# Get list of similar transcripts in last exon
 	results = similar_last_exon(tab[tab.exon_number == 1], trs_distance_thr=distance_thr, end_exon_thr=exon_thr)
 	if len(results) == 0:
@@ -273,7 +279,6 @@ parser.add_argument('transcript_end_distance_threshold', type=int, default=sys.s
 parser.add_argument('exon_file', type=str, default=sys.stdout, help='path of the exon entries output bed file')
 parser.add_argument('exon_unique_file', type=str, default=sys.stdout, help='path of the unique gene exon entries output bed file')
 parser.add_argument('exon_bedmap', type=str, default=sys.stdout, help='path of the exon coords for bedmap output bed file')
-parser.add_argument('exon_bedmap2', type=str, default=sys.stdout, help='path of the exon coords for bedmap output bed file (internal priming)')
 args = parser.parse_args()
 
 #Variables
@@ -290,24 +295,30 @@ gtf = pd.read_csv(args.gtf_file, sep="\t")
 #****
 
 #Calculate relative coordinates
+print("Calculate relative coordinates...")
 gtf = gtf.groupby('transcript_name').apply(lambda x: relative_coords(x))
 
+
 #Discard all the transcripts with similar ends for each gene
+print("Discard all the transcripts with similar ends for each gene...")
 gtf = gtf.groupby('gene_name').apply(lambda x: remove_sim_exons(x, distance_thr=TRANSCRIPTOMIC_DISTANCE, exon_thr=THRESHOLD_TRANSCRIPT_END))
+gtf = gtf.dropna()
 
 #Sorting Gtf file
+print("Sorting Gtf file...")
 gtf = gtf.sort_values(by=['Chromosome','Start','End']).reset_index(drop=True)
 ex_coltypes = {'Chromosome':'str','Start':'int64','End':'int64','Strand':'str','StartR':'int32','EndR':'int32','gene_id':'category','gene_name':'category','transcript_id':'category','transcript_name':'category','exon_id':'category','exon_number':'int8','gene_type':'category','transcript_type':'category','salmon_rlp':'float'}
 gtf = gtf.astype(ex_coltypes)
 
-# Get unique genes associated to chr
+#Get unique genes associated to chr
+print("Get unique genes associated to chr...")
 gtf_unique = gtf[['Chromosome','gene_name','transcript_name']].sort_values(by=['Chromosome','gene_name','transcript_name'])
 gtf_unique = gtf_unique[~gtf_unique.duplicated(subset='gene_name', keep=False)]
 
 
 #Writing
+print("Writing...")
 gtf.to_parquet(args.exon_file, engine='pyarrow')
 gtf_unique.to_csv(args.exon_unique_file, sep='\t', doublequote=False, index=False)
 gtf[['Chromosome','Start','End','exon_id']].to_csv(args.exon_bedmap, sep='\t', header=False, index=False)
 gtf['Chromosome'] = gtf.Chromosome.str.replace('chr','')
-gtf[['Chromosome','Start','End','gene_name','transcript_name','exon_number']].to_csv(args.exon_bedmap2, sep='\t', header=False, index=False)
