@@ -25,7 +25,8 @@ gff['gene_type'] = "protein_coding"
 gff['transcript_id'] = gff.Parent.str.replace("transcript\\:","", regex=True)
 gff['transcript_name'] = gff.transcript_id
 gff['transcript_type'] = "protein_coding"
-gff['exon_number'] = gff.exon_id.str[-1]
+#gff['exon_number'] = gff.exon_id.str[-1]
+gff['exon_number'] = gff.pop('rank').astype(str)
 gff = gff[gff.Feature=="exon"]
 
 
