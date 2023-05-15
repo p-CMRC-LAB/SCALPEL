@@ -42,7 +42,7 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
     b = apply(a,2, function(x) x/sum(x))
     c = a[names(which(rowSums(b > threshold_tr_abundance) >= 1)),]
     if(nrow(c) > 1){
-      d = chisq.test(c, correct = TRUE, simulate.p.value = TRUE)
+      d = suppressWarnings(chisq.test(c, correct = T, simulate.p.value = F))
       c$gene = x
       c$p_value = d$p.value
       return(list(c, d))
@@ -71,135 +71,163 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
 
 
 
-CoveragePlot = function(genome, gene_in=NULL, transcripts_in=NULL, bamfiles=NULL, bamnames=NULL,
-                        transcritps_showed = "scalpel", seurat.obj=NULL, genome_gr="hg38",
-                        condition="orig.ident", left_space=500, rigth_space=500, tr_position="below",
-                        cex.tr_name=1.5, scale = TRUE, type_data=c("coverage"), check_ip_pos = FALSE, scalpel_results=NULL, ip_PATH=NULL){
-  # --------------------------------
-  # Function to plot isoforms coverage
-  # --------------------------------
-  
-  #check presence of required inputs
-  if(is.null(gene_in)){
-    return("Enter gene [gene_in]")
-  }
-  if(is.null(bamfiles) || is.null(bamnames)){
-    return("Enter bamfiles path and the names associated [bamfiles / bamnames]")
-  }
-
-  if(check_ip_pos==TRUE & is.null(scalpel_results)){
-    return("For checking ip position, scalpel results folder path is required")
-  }  
-  
-  #1/ Preprocess genome tab
-  #filter exons
-  genome = genome[genome$type == "exon",]
-
-  #check columns names issues
-  colnames(genome) = str_replace(colnames(genome),"gene_biotype","gene_type")
-  colnames(genome) = str_replace(colnames(genome),"transcript_biotype","transcript_type")
-
-  #selection
-  genome = genome[,c("seqnames","start","end","width","strand","gene_type","gene_id",
-                     "exon_id","transcript_id","gene_name","transcript_name")]
-  #rename
-  colnames(genome) = c("Chromosome","start","end","width","strand","feature","gene",
-                       "exon","transcript","gene_name","transcript_name")
-  #extract gene_tab
-  print("extract gene...")
-  gene_tab = genome[genome$gene_name==gene_in,]
-  #filter or not the transcript processed in scalpel
-  if(transcritps_showed=="scalpel"){
-    obj.tab = data.table(stringr::str_split_fixed(rownames(seurat.obj), pattern = "\\*\\*\\*", n=2))
-    colnames(obj.tab) = c("gene","tr")
-    gene_tab = gene_tab %>% filter(transcript_name %in% obj.tab$tr)
-  }else if(transcritps_showed=="all"){
-    print("ok")
-  }
-  #Filter transcript specifics
-  if(is.null(transcripts_in)){
-    print("No specific filtering of input transcripts...")
-  }else{
-    print("filtering transcripts...")
-    gene_tab = gene_tab %>% filter(transcript_name %in% transcripts_in)
-  }
-  gene_tab$symbol = gene_tab$transcript_name
-  gene_tab =  gene_tab %>% mutate_if(is.factor,as.character)
-  CHR = gene_tab$Chromosome[1]
-  start_gene = min(gene_tab$start)
-  end_gene = max(gene_tab$end)
-  strand_gene = gene_tab$strand[1]
-  print(CHR)
-
-  
-  #2/ Create GeneTrack for Gviz
-  print("create GeneTrack viz...")
-  gtrack = GeneRegionTrack(gene_tab, chromosome = gene_tab$Chromosome[1], genome = genome_gr,
-                           name = as.character(gene_tab$gene_name[1]), transcriptAnnotation = "symbol",
-                           background.title = "darkblue", cex.group=cex.tr_name, just.group=tr_position, windowSize=5, shape = "arrow")
 
 
-  #Bis Create Annotation track if ip db
-  atrack = AnnotationTrack(name = "IP", background.title = "cornflowerblue")
-  if(check_ip_pos==TRUE){
-    print("process ip table...")
-    #read ip table
-    iptab = fread(paste0(scalpel_results,"/reads/ip_filtered/",CHR,".ipp"),sep="\t")
-    # iptab = fread(ip_PATH, sep="\t")
-    # colnames(iptab) = c("chr_ipn","Start_ip","End_ip","c4","c5","Strand_ip")
-    #filter based on coordinates and strand
-    print(iptab)
-    print(min(gene_tab$start))
-    print(max(gene_tab$end))
-    iptab = iptab %>% dplyr::filter(Start_ip>min(gene_tab$start) & Start_ip<max(gene_tab$end))
-    print(iptab)
-    if(nrow(iptab)==0){
-      atrack = AnnotationTrack(, name = "IP", background.title = "cornflowerblue")
-    }else{
-      atrack = AnnotationTrack(start = iptab$Start_ip, end = iptab$End_ip, chromosome = CHR, strand = rep(strand_gene,nrow(iptab)), genone = genome_gr, name = "IP", background.title = "cornflowerblue")
+
+
+CoveragePlot = function(genome_gr=NULL, gene=NULL, bamfiles=NULL, bamnames=NULL,
+                        seuratobj=NULL, condition=NULL, iptab = NULL, patab = NULL,
+                        genome=NULL, transcriptAnnotation="name", transcripts_tofilter=NULL,
+                        samtoolsbin = "samtools") {
+    
+    # Function to plot Transcript Coverage
+    # #***********************************
+    # 
+    # required args:
+    #     - genome_gr [Granges object]
+    #     - gene [str]
+    #     - bamfiles [str]
+    #     - bamnames [str]
+    #     - seuratobj
+    # 
+    # optional args:
+    #     -
+    #     -
+    #     -
+    
+    
+    # Check input args
+    # ----------------
+    print('cheking inputs args...')
+    if(is.null(genome_gr) || is.null(gene) || is.null(bamfiles) || is.null(bamnames) || is.null(seuratobj)){
+        stop("Error in input args provided, check required args (genome_gr, gene, bamfiles, bamnames, seuratobj) !!")
     }
-  }else{
-    print("ip position not printed !")
-  }
-
-  
-  #3/ Build coverage
-  tryCatch(
-    expr = {
-      print("create DataTrack viz...")
-      CHR = gene_tab$Chromosome[1]
-      sample_sizes = table(seurat.obj[[condition]])
-      start_gene = min(gene_tab$start)
-      end_gene = max(gene_tab$end)
-      strand_gene = gene_tab$strand[1]
-      param = Rsamtools::ScanBamParam(which = GenomicRanges::GRanges(seqnames = CHR, ranges = IRanges::IRanges(start_gene, width = end_gene - start_gene + 0), strand = strand_gene))
-      dtracks_res = lapply(1:length(bamfiles), function(x){
-        print(bamfiles[x])
-        covrg = GenomicAlignments::coverage(bamfiles[x], param=param)[[CHR]]
-        coverage_reads = (runValue(covrg))
-        max_val = max((coverage_reads / sample_sizes[x]) * 100)
-      	dtrack_in = AlignmentsTrack(bamfiles[x], chromosome=CHR, genome=genome_gr, name=bamnames[x], background.title = "black", transformation = function(y) { (y/sample_sizes[x]) * 100}, from=min(gene_tab$start), to=max(gene_tab$end))
-        return(list(max_val, dtrack_in))
-      })
-      dtracks = unlist(lapply(dtracks_res, function(x) x[2]))
-      max_y = max(unlist(lapply(dtracks_res, function(x) x[1])))
-      print(max_y)
-      
-      #Plotting
-      options(ucscChromosomeNames=FALSE)
-      #plots
-      EXTRA.L = left_space
-      EXTRA.R = rigth_space
-      
-      #tracks
-      if (scale == TRUE){
-        return(plotTracks(c(dtracks, atrack, gtrack), from = min(gene_tab$start) - EXTRA.L, to = max(gene_tab$end) + EXTRA.R, type = type_data, ylim=c(0,max_y), 
-          sizes = c(rep(1, length(dtracks)),0.1,1)))
+    
+    if(!is.null(condition)){
+        if(length(table(seuratobj[[condition]])) != length(bamfiles)){
+            stop("Error: The number of provided bamfiles does not match the level of condition specified in the seurat object")
         }else{
-          return(plotTracks(c(dtracks, atrack, gtrack), from = min(gene_tab$start) - EXTRA.L, to = max(gene_tab$end) + EXTRA.R, type = type_data, 
-          sizes = c(rep(1, length(dtracks)),0.1,1)))
+            size_samples = table(seuratobj[[condition]])[bamnames]
+            print("sample sizes...")
+            print(size_samples)
         }
-    },
+    }else{
+        size_samples = rep(1, length(bamfiles))
+    }
+    
+    if(is.null(genome)){
+        stop("Please: Specify genome (hg39 or mm10)")
+    }
+    
+
+    # Filter Grange genome table and get gene metada (1)
+    # ----------------------------------------------
+    print('Filter Grange genome table and get gene metada...')
+    genein = genome_gr[(genome_gr$gene_name==gene) & (genome_gr$type=="exon")]
+    if(length(genein)==0){stop("Error: Empty gene table.... Gene provided not found into the GenomeGrange object! Check gene provided or GTF!")}
+    if(!(is.null(transcripts_tofilter))){genein = genein[genein$transcript_name %in% transcripts_tofilter]}
+    transcripts = GenomicFeatures::transcripts(GenomicFeatures::makeTxDbFromGRanges(genein))
+    
+    #define sets
+    chrom = as.character(seqnames(genein)@values)
+    start = min(start(genein))
+    end = max(end(genein))
+    gene_strand = as.character(strand(genein)@values)
+    
+    #Internal priming track
+    if(is.null(iptab)){
+        atrack = AnnotationTrack(name = "ip_sites", background.title="cornflowerblue", col="red", background.title="cornflowerblue")
+    }else{
+        print("internal priming table provided...")
+        ip_gene = iptab %>% filter(gene_name == gene) %>% dplyr::select(seqname, start_ip, end_ip, strand) %>% distinct()
+        colnames(ip_gene) = c("seqname","start","end","strand")
+        ip_gene$start = as.numeric(ip_gene$start)
+        ip_gene$end = as.numeric(ip_gene$end)
+        if(nrow(ip_gene)>0){
+            print(paste0(gene, ": associated ip_pos founded..."))
+            atrack = AnnotationTrack(ip_gene, name = "ip_sites", chromosome = chrom, col="red", background.title="cornflowerblue")
+        }else{
+            print(paste0(gene, ": no ip pos"))
+            atrack = AnnotationTrack( name = "ip_sites", col="red", background.title="cornflowerblue")   
+        }
+    }
+    
+    
+    #PolyA sites track
+    if(is.null(patab)){
+        patrack = AnnotationTrack(name = "polyA_sites", background.title="cornflowerblue")
+    }else{
+        print("PA sites table provided...")
+        start_lim = start
+        end_lim = end
+        patab = patab %>% dplyr::filter((type=="polyA_site") & (start >= start_lim & end <= end_lim)) %>%
+            dplyr::select(seqnames, start, end, strand, type) %>% distinct()
+        patrack = AnnotationTrack(patab, name = "polyA_sites", chromosome = chrom, col="blueviolet", background.title="cornflowerblue")
+    }
+
+    
+    # Create Region Track object (2)
+    # --------------------------
+    print("Create Region Track object...")
+    genein.tb = data.frame(genein)
+    
+    #check columns names issues
+    colnames(genein.tb) = str_replace(colnames(genein.tb),"gene_biotype","gene_type")
+    colnames(genein.tb) = str_replace(colnames(genein.tb),"transcript_biotype","transcript_type")
+    
+    
+    #selection
+    genein.tb = genein.tb[,c("seqnames","start","end","width","strand","gene_type","gene_id",
+    "exon_id","transcript_id","gene_name","transcript_name")]
+    fwrite(genein.tb[,c("seqnames","start","end","strand")] %>% arrange(start,end), file = "exon.bed", sep="\t")
+    #rename
+    colnames(genein.tb) = c("Chromosome","start","end","width","strand","feature","gene","exon",
+    "transcript","gene_name","transcript_name")
+    if(transcriptAnnotation == "name"){
+    print("transcriptAnnotation [transcriptName]")
+    genein.tb$transcript = genein.tb$transcript_name
+    }else{
+    print("transcriptAnnotation [transcriptID]")
+    }
+    #Track
+    gtrack = GeneRegionTrack(genein.tb, chromosome = chrom, genome = "hg38",
+    name = gene, transcriptAnnotation = "transcript",
+    background.title = "darkblue", just.group="below")
+
+    
+    # Create Coverate Track objects (3)
+    # -----------------------------
+    print("Create Coverate Track objects...")
+    tryCatch(
+        expr = {
+            DTRACKS = lapply(1:length(bamfiles), function(x){
+                print(bamfiles[x])
+                #open bamfile
+                bamfile = Rsamtools::BamFile(bamfiles[x])
+                #get coverage
+                coveragein = GenomicRanges::coverage(bamfile, param=Rsamtools::ScanBamParam(which = transcripts))
+                #define Granges
+                gr = GenomicRanges::GRanges(seqnames = chrom, ranges = IRanges::IRanges(start:end, width = 1), strand = gene_strand)
+                mcols(gr) = (as.numeric(coveragein[[chrom]])[start:end] / size_samples[x]) * 100
+                #return Dtrack object
+                RET = list()
+                RET$OBJ = Gviz::DataTrack(gr, type = "histogram", genome = genome, name = bamnames[x], fill.histogram="black", col.histogram = "darkgrey", 
+                                          background.title = "black")
+                RET$YMAX = max(mcols(gr)$X)
+                
+                return(RET)
+            })
+            YMAX = max(unlist(lapply(DTRACKS, function(x) x$YMAX)))
+            DTRACKS = unlist(lapply(DTRACKS, function(x) x$OBJ))
+
+            # [Chromosome Track]z
+            ctrack = GenomeAxisTrack()
+
+            # [Final Plot]
+            # ------------
+            print("Plotting...")
+            plotTracks(c(ctrack, atrack, patrack, gtrack, DTRACKS), ylim = c(0,YMAX))
+        },
     error = function(e){
       message("Error ! Use correct inputs !")
       print(e)
@@ -210,6 +238,30 @@ CoveragePlot = function(genome, gene_in=NULL, transcripts_in=NULL, bamfiles=NULL
     },
     finally = {
       message('All done, quitting.')
-    }
-  )
+    })
 }
+
+
+
+plot_relativeExp = function(seurat.obj, features, group.var, levels.group=NULL, ...){
+    #Function to plot with geom_boxplot relative isoform expression
+    Reduce(`+`, lapply(features, function(x) {
+        subsetted_expression = seurat.obj[x,]@meta.data %>% select(nCount_RNA, `group.var`)
+        subsetted_expression$nCount_RNA = (subsetted_expression$nCount_RNA / sum(subsetted_expression$nCount_RNA)) * 100
+        if(is.null(levels.group)){
+            print("no level reordering")
+        }else{
+            subsetted_expression[,group.var] = factor(subsetted_expression[,group.var], levels = levels.group)
+        }
+        ggplot(subsetted_expression, aes_string(group.var, "nCount_RNA")) +
+            geom_boxplot(aes_string(fill=group.var)) +
+            ggtitle(label = x) + theme_classic(base_size = 13)
+    })) + plot_layout(ncol = length(features))
+}
+
+
+
+
+
+
+

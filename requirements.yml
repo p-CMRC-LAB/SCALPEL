@@ -1,0 +1,30 @@
+name: scalpelenv_test
+channels:
+  - conda-forge
+  - bioconda
+  - anaconda
+  - numba
+  - r
+dependencies:
+  - joblib
+  - pandas==1.5.2
+  - numba
+  - r-doparallel
+  - r-matrix
+  - r-hdf5r
+  - r-tidyr
+  - r-dplyr
+  - r-data.table
+  - r-ggplot2
+  - r-argparse
+  - bedops
+  - samtools>=1.14
+  - vaex
+  - gawk
+  - vaex
+  - gtfparse
+  - pip
+  - pip:
+    - --no-binary=h5py
+    - h5py
+    - numba

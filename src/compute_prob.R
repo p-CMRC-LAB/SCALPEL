@@ -1,5 +1,7 @@
 
 
+
+
 #Libraries
 library(dplyr)
 library(data.table)
@@ -27,8 +29,8 @@ BINS = as.numeric(args$BINS)
 #Files Opening (1)
 #*************
 #get list of of unique read file
-files = list.files(args$PATH_OF_UNIQUE_TR, pattern = "*.fragment_filtered_unique", full.names = T)
-reads = parallel::mclapply(files, function(x) fread(x), mc.preschedule = T, mc.cores = 5)
+files = list.files(args$PATH_OF_UNIQUE_TR, pattern = "*.ip_filtered_unique", full.names = T)
+reads = parallel::mclapply(files, function(x) fread(x, col.names = c("seqname", "start_rd", "end_rd", "strand", "bc", "umi","start","end","gene_name","gene_id","transcript_name","transcript_id","features","exon_number","rel_start","rel_end","salmon_rlp","rel_start_rd","rel_end_rd","dist_END")), mc.preschedule = T, mc.cores = 5)
 reads = do.call(rbind, reads)
 reads
 
@@ -36,9 +38,10 @@ reads
 genes_counts = table(reads$gene_name)
 genes_quants = genes_counts %>% quantile(seq(0,1,0.01))
 reads = reads %>% filter(gene_name %in% names(genes_counts[genes_counts<genes_quants[[QUANTILE_THRESHOLD]]]))
+reads$frag_id = paste0(reads$bc, reads$umi, sep=";")
 
 #get distinct readid / 3end
-dtab = reads %>% distinct(frag_id,read_id,dist_END) %>% arrange(dist_END)
+dtab = reads %>% distinct(frag_id,dist_END) %>% arrange(dist_END)
 dtab = table(dtab$dist_END) %>% data.table()
 dtab$V1 = as.numeric(dtab$V1)
 colnames(dtab) = c('transcriptomic_distance','counts')
@@ -72,7 +75,6 @@ interval.tab$probability_scaled = interval.tab$probs_bin %>% scales::rescale(to 
 
 ggplot(interval.tab) +
     geom_area(aes(transcriptomic_distance,counts), fill="cornflowerblue", size=0.5) +
-#    geom_line(aes(transcriptomic_distance,loess), color="gray20", color="red", size=1) +
     geom_line(aes(transcriptomic_distance,probability_scaled), color="red",size=1) +
     theme_classic() +
     ggtitle("Fragments distribution on transcriptomic space")
@@ -81,6 +83,5 @@ ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, h
 
 # [Writing]
 # --------
-#interval.tab$probs_bin = interval.tab$loess
 ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, height = 8.27)
 fwrite(interval.tab[,c('transcriptomic_distance','counts','probs_bin')], file = args$OUTPUT_PROB, sep="\t", col.names = F)

@@ -4,31 +4,31 @@
 
 #libs
 import argparse
-import vaex as vx
 import pandas as pd
-import numpy as np
-import dask.dataframe as dd
-import sys
 
 #Arguments Parser
 parser = argparse.ArgumentParser(description='Processing of Salmon quantification file')
-parser.add_argument('-salmon_quant', type=str, default=sys.stdin, help='path of salmon quant file')
-parser.add_argument('-output_file', type=str, default=sys.stdout, help='path of output file')
+parser.add_argument('-salmon_quant', type=str, help='path of salmon quant file')
+parser.add_argument('-output_file', type=str, help='path of output file')
 args = parser.parse_args()
 
 #Files
 print("read file...")
-qf = dd.read_csv(args.salmon_quant, sep="\t", header=0, names=['Name','length','EffectiveLength','TPM','NumReads','Sample']).compute()
+all_samples = []
+for filin in args.salmon_quant.split(","):
+	#open file
+	filetab = pd.read_csv(filin, sep="\t")
+	filetab["Sample"] = filin
+	all_samples.append(filetab)
+qf = pd.concat(all_samples)
 
 #expand gene name
 name_tr = qf.Name.values[1]
-print(name_tr)
 if '|' in name_tr:
-	qf = pd.concat([qf.Name.str.split("|", expand=True).loc[:,[0,1,4,5]], qf.loc[:,['length','NumReads','Sample']]], axis=1)
-	qf.columns = ['transcript_id','gene_id','transcript_name','gene_name','length','NumReads','Sample']
+	qf = pd.concat([qf.Name.str.split("|", expand=True).loc[:,[0]], qf[['Length', 'NumReads','Sample']]], axis=1)
 else:
-	qf = qf.loc[:,['Name','length','NumReads','Sample']]
-	qf.columns = ['transcript_id','length','NumReads','Sample']
+	qf = qf.loc[:,['Name','Length','NumReads','Sample']]
+qf.columns = ['transcript_id','length','NumReads','Sample']
 
 
 #filter transcripts null

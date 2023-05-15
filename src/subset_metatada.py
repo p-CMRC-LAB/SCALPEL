@@ -43,5 +43,3 @@ del bed["read_id_uniq"]
 #write
 bed.to_csv(args.output_path, sep="\t", header=False, index=False)
 
-
-#NDX550569_RUO:71:HVCKLBGXK:4:13609:8701:13104

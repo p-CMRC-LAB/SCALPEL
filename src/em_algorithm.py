@@ -5,18 +5,20 @@ import numpy as np
 import argparse
 import vaex as vx
 from IPython.display import display
+from joblib import Parallel, delayed
 
 
 #Argument Parser
 #**************
 parser = argparse.ArgumentParser(description='compute EM algorithm...')
-parser.add_argument('cell_path', metavar='Bfip1', type=str, help='path of cell file')
+parser.add_argument('cell', type=str, help='path of cell file')
 parser.add_argument('output_path', metavar='Efip', type=str, help='path of probability transcripts file')
 args = parser.parse_args()
 
 
 #Functions
 #*********
+
 def posterior(probs, tr_estimates):
 	'''
 	Function to impute transcript relative estimate abundances
@@ -39,7 +41,7 @@ def em_algorithm(tab, max_iteration=50):
 	#Iterate until convergence (EM standard)
 	for i in range(max_iteration):
 		#get posterior probs
-		estimated_abundances = np.round((tab.groupby('umi').apply(lambda x: posterior(x, estimated_abundances))).mean(axis=0),2)
+		estimated_abundances = np.round((tab.groupby('umi', group_keys=False).apply(lambda x: posterior(x, estimated_abundances))).mean(axis=0),2)
 		#keep track if different... else stop
 		if np.array_equal(estimated_abundances, buffer):
 			return(estimated_abundances)
@@ -60,27 +62,24 @@ def isoform_abundances(gene_tab, gene):
 		return [gene,gene_tab.transcript_name.unique().tolist(),em_algorithm(gene_tab).tolist()]
 
 
-# Cell file opening
-# -----------------
-print("opening file")
-cell = pd.read_csv(args.cell_path, sep='\t', names=['bc','gene_name','gene_id','transcript_name','transcript_id','salmon_rlp','umi','frag_id','probs_bin'], header=None)
-cell['frag_prob_weighted'] = cell.probs_bin * cell.salmon_rlp.astype('float')
-cell = cell.astype({'gene_name':'str'})
+# Fragment file opening
+# ---------------------
 
-# select columns
-# --------------
-intab = cell[['gene_name','umi','transcript_name','frag_prob_weighted']]
-intab = intab.sort_values(["gene_name","transcript_name"])
+# print("fragment file opening...")
+cell = pd.read_csv(args.cell, sep="\t", names=['bc','gene_name','gene_id','transcript_name','transcript_id','umi','frag_prob_weighted'])
 
-
-# Calulate isoform relatives abundances
-# -------------------------------------
-res = pd.DataFrame([isoform_abundances(group[1], group[0]) for group in intab.groupby("gene_name")])
+# Perform EM algorithm
+print("EM alg...")
+res = pd.DataFrame([isoform_abundances(group[1], group[0]) for group in cell[['gene_name','umi','transcript_name','frag_prob_weighted']].groupby("gene_name")])
 res.columns = ["gene_name","transcript_name","tr_prob"]
 res = res.explode(["transcript_name","tr_prob"])
-res = ((cell[['bc','gene_name','gene_id','transcript_name','transcript_id']]).drop_duplicates()).merge(res, on=['transcript_name','gene_name'], how='left')
 
-# writing
-# -------
-print("writing")
-res.to_csv(args.output_path, sep="\t", header=False, index=False)
+print("joining...")
+cell = cell.drop_duplicates(['gene_name','transcript_name'])
+cell = cell.merge(res, on=['gene_name','transcript_name'],  how="left")[['bc','gene_name','gene_id','transcript_name','transcript_id','tr_prob']]
+
+#write into output each cell
+print("writing...")
+cell.to_csv(args.output_path, sep="\t", index=False)
+
+

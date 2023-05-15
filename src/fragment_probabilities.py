@@ -30,25 +30,29 @@ args = parser.parse_args()
 #Files opening
 #*************
 print('File opening...')
-reads = vx.open(args.fragments_path)
+reads = vx.from_csv(args.fragments_path, sep="\t", names = ["seqname", "start_rd", "end_rd", "strand", "bc", "umi","start","end","gene_name","gene_id","transcript_name","transcript_id","features","exon_number","rel_start","rel_end","salmon_rlp","rel_start_rd","rel_end_rd","dist_END"])
 prob = vx.from_csv(args.prob_path, sep="\t", names=['dist_END', 'counts', 'probs_bin'])
 
+reads['dist_END'] = reads.dist_END.astype("int")
+prob["dist_END"] = prob.dist_END.astype("int")
+
+print(reads)
+print(prob)
 
 #Merging
 #*******
 print('File merging...')
 reads = reads.join(prob, left_on='dist_END', right_on='dist_END', how='left')
 reads['probs_bin'] = reads.probs_bin.fillnan(0)
-#reads['probability_normalized'] = reads.probability_normalized.fillnan(0)
 
 
 #Selection of columns
 #********************
 print('Column selection...')
+reads['frag_id'] = reads.bc + ";" + reads.umi
 reads = reads[['bc','gene_name','gene_id','transcript_name','transcript_id','salmon_rlp','umi','frag_id','probs_bin']]
 #scale between 0 and 100
 reads['salmon_rlp'] = reads.salmon_rlp * 100
-
 
 #delete sequencing tags attached to the barcode
 reads['bc'] = reads.bc.str.replace("XC:Z:","")
@@ -61,14 +65,19 @@ reads['umi'] = reads.umi.str.replace("UB:Z:","")
 #Grouping
 #********
 print('Grouping...')
-#reads = reads.astype({'bc':'str','gene_name':'str','gene_id':'str','transcript_name':'str','transcript_id':'str','salmon_rlp':'str','umi':'str','frag_id':'str'})
+# reads = reads.astype({'bc':'str','gene_name':'str','gene_id':'str','transcript_name':'str','transcript_id':'str','salmon_rlp':'str','umi':'str','frag_id':'str'})
 reads_pd = reads.to_pandas_df()
-print(reads)
 print("product...")
 reads = reads_pd.groupby(['bc','gene_name','gene_id','transcript_name','transcript_id','salmon_rlp','umi','frag_id']).prod().reset_index()
+reads['frag_prob_weighted'] = reads.probs_bin.astype('float') * reads.salmon_rlp.astype('float')
+reads = reads.astype({'gene_name':'str'})
+reads = reads.sort_values(["bc","gene_name","transcript_name"])
+
+reads = reads[['bc','gene_name','gene_id','transcript_name','transcript_id','umi','frag_prob_weighted']]
 
 
 #Splitting table by cells and writing
 #************************************
 print("writing")
+# vx.from_pandas(reads).export_hdf5(args.output_bed)
 reads.to_csv(args.output_bed, sep="\t", index=False, header=False)
