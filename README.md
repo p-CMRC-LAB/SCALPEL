@@ -67,13 +67,13 @@ For the need of the analysis in this vignette, the data used is a 10X dataset fr
 
 Scalpel can be applied on the 10X result folder, containing the default files (_possorted_genome_bam.bam, possorted_genome_bam.bam.bai, filtered_feature_bc_matrix.h5, barcodes.tsv.gz, ..._)
 
-[10X_FOLDER]()
+[10X_FOLDER](https://drive.bio.idibell.cat/index.php/s/eoYbCKA48eZXMDK)
 
 ##### Internal priming files which reference all the internal priming positions
 
-[(Human) Internal priming annotation - GRCh38]()
+[(Human) Internal priming annotation - GRCh38](https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/databases/GRCh38_2020_A_polyA.track.tar.gz)
 
-[(Mouse) Internal priming annotation - mm10]()
+[(Mouse) Internal priming annotation - mm10](https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/databases/mm10_polya.track.tar.gz)
 
 ##### Reference genome annotation files
 
