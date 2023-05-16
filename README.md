@@ -47,12 +47,12 @@ To get a local copy up and running follow these simple example steps.
 ```
 2. Install the required packages using the requirement.txt file in the SCALPEL folder
 ```sh
-> conda env create -f requirements.yml
+> conda env create -f SCALPEL/requirements.yml
 ```
    
    Another solution (if conda installation takes long) can be to create a Conda environment, install Mamba (faster implementation of Conda) and install the packages using mamba:
 ```sh
-> mamba env create --file SCALPEL/requirements.txt
+> mamba env create --file SCALPEL/requirements.yml
 ```
 
 ## Usage
