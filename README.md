@@ -5,13 +5,13 @@ SCALPEL , a NextFlow based tool for the characterization of Alternative polyaden
 <!-- PROJECT LOGO -->
 <!-- <br />
 <div align="center">
-  <a href="https://github.com/othneildrew/Best-README-Template">
+  <a href="">
     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/ba/Dessin_scalpel.svg/1200px-Dessin_scalpel.svg.png" alt="SCALPEL" width="300" height="300">
   </a>
 </div>-->
 
 <div align="right">
-  <a href="https://github.com/othneildrew/Best-README-Template">
+  <a href="">
     <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Scalpel_workflow2.svg" alt="SCALPEL" >
   </a>
 </div>
