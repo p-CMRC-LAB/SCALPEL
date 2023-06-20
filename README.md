@@ -160,7 +160,7 @@ During the Nextflow execution or at the end, an image file (BINS_PROB.jpeg) show
 
 <br />
 <div align="left">
-  <a href="https://github.com/othneildrew/Best-README-Template">
+  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/frag_coverage.png">
     <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/frag_coverage.png" alt="SCALPEL" >
   </a>
 </div>
@@ -230,7 +230,7 @@ DimPlot(sc.obj, group.by = "CellType", label = T, label.size = 5)
 
 <br />
 <div align="center">
-  <a href="https://github.com/othneildrew/Best-README-Template">
+  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/UMAP_celltypes.png">
     <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/UMAP_celltypes.png" alt="SCALPEL" >
   </a>
 </div>
@@ -261,14 +261,14 @@ FeaturePlot(sc.obj, features=gene_tab$gene_tr, order=T, pt.size=0.9, label=T, la
 
 <br />
 <div align="center">
-  <a href="">
+  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_expression.png">
     <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_expression.png" alt="Cnbp expression" >
   </a>
 </div>
 
 <br />
 <div align="center">
-  <a href="">
+  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_expression2.png">
     <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_expression2.png" alt="Cnpbp expression" >
   </a>
 </div>
@@ -344,7 +344,7 @@ CoveragePlot(genome_gr = genome_tb,
 
 <br />
 <div align="center">
-  <a href="">
+  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnpb_isoforms.png">
     <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnpb_isoforms.png" alt="Cnbp isoform expression" >
   </a>
 </div>
@@ -358,7 +358,7 @@ plot_relativeExp(sc.obj, features = gene_tab$gene_tr, group.var = "CellType")
 
 <br />
 <div align="center">
-  <a href="">
+  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_relative_expression.png">
     <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_relative_expression.png" alt="Cnbp isoform expression" >
   </a>
 </div>
