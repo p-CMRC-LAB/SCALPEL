@@ -2,6 +2,8 @@
 
 
 
+
+
 # [Script for Function needed in Scalpel analysis]
 # ------------------------------------------------
 library(GenomicRanges)
@@ -61,7 +63,7 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
   RES_TAB = do.call(rbind, all_tests)
   #adjust _pvalue
   print("P.value adjusting......")
-  # RES_TAB$p_value.adjusted = p.adjust(RES_TAB$p_value,method = 'BH')
+  
   #filter
   RES_TAB_SIGNIF = RES_TAB %>% filter(p_value.adjusted < pval_adjusted)
   RES_TAB_SIGNIF$gene_tr = rownames(RES_TAB_SIGNIF)
@@ -278,13 +280,13 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
 
   #1. Build genome table & Track
   print("GenomeTrack building...")
-  gtab.gr = genome.gr[genome_gr$gene_name==gene_in]
+  gtab.gr = genome_gr[genome_gr$gene_name==gene_in]
   gtab.gr$colors = "orange"
   #filter transcripts provided in case
   if(filter_trs){
     print("filtering...")
     print(transcripts_in)
-    if(is.null(transcripts_in)){stop("Error! Provide transcripts: transcripts_in")}
+    if(is.null(transcripts_in)){stop("Error! Provide list of transcripts: transcripts_in")}
     gtab.gr = gtab.gr[gtab.gr$transcript_name %in% transcripts_in]
   }
   gtab.gr$colors = as.character(gtab.gr$colors)
@@ -300,8 +302,8 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
     filter(!(type == "exon" & check == T)) %>%
     ungroup()
   gtab$feature = gtab$type
-  gtab$feature = str_replace(gtab$feature,"UTR","utr")
-  gtab$feature = str_replace(gtab$feature, "exon", "utr")
+  gtab$feature = stringr::str_replace(gtab$feature,"UTR","utr")
+  gtab$feature = stringr::str_replace(gtab$feature, "exon", "utr")
   gtab$colors = "orange"
   if(!is.null(transcripts_in)){
     print("highliting transcripts...")
@@ -318,11 +320,13 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
 
   #track
   print(gtab)
-  data.table::fwrite(dplyr::select(gtab, Chromosome,start,end), file="./coords.txt", sep="\t", row.names = F, col.names = F)
+  dplyr::select(gtab, Chromosome,start,end) %>%
+    mutate(start = start - 25, end = end + 25) %>%
+  data.table::fwrite(file="./coords.txt", sep="\t", row.names = F, col.names = F)
   Gtrack = Gviz::GeneRegionTrack(GenomicRanges::makeGRangesFromDataFrame(gtab, keep.extra.columns = T), chromosome = chrom,
                                  name = gene_in, transcriptAnnotation = "transcript", 
                                  just.group="below", genome=genome_sp, fill="orange", color="black", col = "black", 
-                                 background.title="darkmagenta", fontsize.group=16,
+                                 background.title="darkmagenta", fontsize.group=16, 
                                  fill=gtab$colors)
 
   #1bis : Annotation Track building
@@ -330,35 +334,37 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
     curr.tab = dplyr::filter(annot_tab, start>=starts & end<=ends)
     Atrack = AnnotationTrack(GenomicRanges::makeGRangesFromDataFrame(curr.tab), name = "Peaks",
                              chromosome = chrom, fill="olivedrab", id=curr.tab$name,
-                             background.title="black", featureAnnotation = "id")
+                             background.title="black", featureAnnotation = "id", fontcolor.group="black")
   }else{
     Atrack = AnnotationTrack(chromosome = chrom, background.title="black", name = "Peaks")
   }
 
   #2. Build Alignment Track
   print("DataTack building...")
-  Atracks.res = lapply(1:length(filtered.bam), function(x){
-    print(names(filtered.bam)[x])
+  print("oooook")
+  Atracks.res = lapply(1:length(bamfiles), function(x){
+    print(names(bamfiles)[x])
     #get coverage
-    system(paste0(samtools.bin, " view -b --region-file coords.txt ", filtered.bam[x], " > current.bam"))
+    system(paste0(samtools.bin, " view -b --region-file coords.txt ", bamfiles[x], " > current.bam"))
     cov.exp = system(paste0(samtools.bin," depth -b coords.txt current.bam > current.cov"))
     cov.tab = fread("current.cov", col.names = c("seqnames","start","depth")) %>% dplyr::filter(depth>=0)
     #dataTrack
     curr.track = DataTrack(start = cov.tab$start, width=1, data = cov.tab$depth, chromosome = chrom, genome=genome_sp,
-                           type=c("l","hist"), background.title="coral4", name = names(filtered.bam)[x], col.histogram="gray")
+                           type=c("hist"), background.title="coral4", name = names(bamfiles)[x], col.histogram="blue")
     return(list(max.depth=max(cov.tab$depth), track=curr.track))
   })
   Atracks = lapply(Atracks.res, function(x) x[[2]])
   YMAX = max(unlist(lapply(Atracks.res, function(x) x[[1]])))
   system("rm current.cov")
   system("rm current.bam")
+  print(Atracks)
 
   #plotting...
   print("Plotting...")
   in.tracks = c(axisTrack, Atrack,Gtrack, Atracks)
 
   #in case of ZOOMING option
-  size.tracks = c(0.1,0.4,0.6,rep(0.5/length(bamfiles), length(bamfiles)))
+  size.tracks = c(0.3,0.1,0.6,rep(0.9/length(bamfiles), length(bamfiles)))
   if(is.null(distZOOM)){
     plotTracks(in.tracks, sizes = size.tracks, ylim = c(0,YMAX))
   }else{

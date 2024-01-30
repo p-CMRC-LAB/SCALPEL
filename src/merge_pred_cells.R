@@ -27,8 +27,8 @@ print("Files reading...")
 RES <- mclapply(pred_files, function(x){
   print(x)
   #reading
-  pred = fread(x, nThread = 10)
-}, mc.preschedule = T, mc.cores = 5)
+  pred = fread(x)
+}, mc.preschedule = T, mc.cores = 1)
 
 
 #Merging
