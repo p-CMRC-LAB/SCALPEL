@@ -61,7 +61,8 @@ To get a local copy up and running follow these simple example steps.
 
 #### Input files
 
-For the need of the analysis in this vignette, the data used is a 10X dataset from the study from [Winterpacht A, Lukassen](https://pubmed.ncbi.nlm.nih.gov/30204153/) on Mouse. The demo data is 10X processed folder containing a BAM file with aligned reads from the published data [GSE104556](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE104556) from GEO.
+For the need of the analysis in this vignette, the data used is a 10X dataset from the study from [Winterpacht A, Lukassen](https://pubmed.ncbi.nlm.nih.gov/30204153/) on Mouse. The demo data is 10X processed folder containing a BAM file with aligned reads from the published data [GSE104556](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE104556) 
+from GEO.
 
 ##### Sample
 
@@ -84,21 +85,20 @@ The reference genome file annotation (GTF) and the reference transcript sequence
 [(Mouse) FASTA_reference_file](https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_mouse/release_M10/gencode.vM10.transcripts.fa.gz)
 
 
-#### Preprocessing
+#### Execution
 
-For running, SCALPEL requires a file quantifying the average transcript abundances in bulk. In order to obtain this file we can run the _preprocessing_scalpel.nf_ script into SCALPEL. The execution of this script requires a salmon index repository.
+For running, SCALPEL requires to provide specific input files path & parameters:
+ - SAMPLE files folder path (\*.bam/\*.bai/\*.barcodes/\*.counts.txt)  **[\-\-samples]**
+ - FASTQs files folder path (\*.fastq.gz) **[\-\-reads]**
+ - FASTA transcriptome reference path **[--transcriptome]**
+ - GTF annotation file path **[\-\-gtf]**
+ - Internal priming annotation file **[\-\-ipdb]**
+ - Sequencing type (chromium or dropseq) **[\-\-sequencing]**
 
-1. Generate the salmon index repository
-```sh
->./bin/salmon index -t MOUSE_FASTA_reference_file -i transcripts_index -p 10
-```
+The script can be applied into a folder containing several samples to be analyzed. All the samples files with the defined extensions mentionned above (\*.bam/\*.bai/\*.barcodes/\*.counts.txt) will be processed according each sample name.
 
-2. Run the salmon quantification on each samples based on your input sample _Fastq files_
-```sh
-> ./bin/salmon quant -i transcripts_index -l A -1 FASTQ_files/SRR6129051_S1_L001_R1_001.fastq.gz -2 FASTQ_files/SRR6129051_S1_L001_R2_001.fastq.gz -o SRR6129050_quant -p 10
-```
-A _quant.sf_ will be generated in the SRR6129050_quant folder.
-
+**Differential isoform usage analysis on clusters:**
+Differential analysis usage is done in the downstream analysis step following the isoform quantification by default considering the different samples provided. To perform a differential analysis on defined cells cluster, use the optional argument **[\-\-clusters]**
 
 #### Processing
 You can print the Scalpel help documentation by running the following command
@@ -111,52 +111,44 @@ You can print the Scalpel help documentation by running the following command
 	===============================
 
 	Execution:
-	- In case of providing 10X cell ranger folder:
-	usage: nextflow run -resume scalpel.nf --sequencing <chromium> --folder_in <10X_folder> --annot <genome_annotation_reference> --ipdb <internal_priming_ref_file> --quant_file <SAMPLE.sf,...>
+	Ex: nextflow run -resume scalpel.nf --sequencing <Sequencing type>
+	 --samples <SAMPLE files folder path>
+	 --reads <FASTQs files folder path> --transcriptome <FASTA transcriptome reference path>
+	 --annot <GTF annotation file path> --ipdb <Internal priming annotation file> 
+	
+	Input files:
+    - Annotation required files(required):
+        - transcriptome reference [--transcriptome]
+        - annotation GTF reference [--gtf]
+        - internal priming annotation [--ipdb]
+      
+    - Reads processing files (required):
+        - samples files [--samples]
+        - fastqs files [--reads]
+    
+    - Params:
+        Required:
+        - sequencing type (required): ${params.sequencing}
 
-	- If providing Dropseq files or Others:
-	usage: nextflow run -resume scalpel.nf --sequencing <dropseq> --bam <BAM> --bai <BAI> --dge_matrix <DGE> --barcodes <barcodes> --annot <genome_annotation_reference> --ipdb <internal_priming_ref_file> --quant_file <SAMPLE.sf,...>
-
-	Output options:
-	--folder_in,					Path to 10X Cellranger results folder [required if 10X file analysis]
-	--bam,							Path to indexed BAM file [required]
-	--bai,							Path to BAM index file	[required]
-	--dge_matrix,					Path to DGE count matrix file [required]
-	--quant_file,					Path to salmon quantification file from preprocessing [required]
-	--ipdb,							Path to internal priming reference annotation file [required]
-	--barcodes,						Path to file containing valid barcodes [required]
-	--annot,						Path to genomic annotation reference file [required]
-	--sequencing,					Sequencing type [chromium,dropseq]
-
-	[--dt_threshold] (optional),				Maximum transcriptomic distance threshold (default, 1000)
-	[--dt_exon_end_threshold] (optional)		Transcriptomic distance between isoform 3'ends threhsold (default, 25)
-	[--isoform_end_ip_threshold] (optional)		Minimal distance of the internal priming position from the isoform 3'end (default, 150)
-	[--cpu_defined] (optional)					Max cpus (default, 50)
-	[--subsampling] (optional)					BAM file subsampling threshold (default 1, select all reads)
-	[--gene_fraction] (optional)				theshold fraction gene based on on expression abundance for probabilities estimation (default, 80%)
-	[--binsize] (optional)						binsize on transcriptomic space for fragment probabilities estimation (default, 30)
-	[--publish_rep] (optional)					Publishing repository (default, <scalpel_results> )
-
-Once the input files extracted, Scalpel can be run in this way:
-
-```sh
-> nextflow run -resume scalpel.nf --sequencing chromium --folder_in <10X_FOLDER_PATH> --annot <REG_GTF_PATH> --ipdb <IP_REFERENCE_FILE_PATH> --quant_file preprocessing/quant.filtered
-```
+        Optional:
+        - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp)
+        - transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional, default 30bp)
+        - minimal distance of Ip from isoform 3'ends (optional, default 60bp)
+        - params.threads [--threads] (default 30)
+        - params.cpus [--cpus] (default 30)
 
 **Important: The chromosome names must to be consistent between the BAM file and the annotation files. If the BAM file contains the '_chr_' character, the GTF and FASTA annotation files, and the internal priming reference annotation should contains the '_chr_' character, and inversely !**
 
 **The internal priming reference files provided contains by default the '_chr_' character in the chromosome names !!**
 
-
-A  **scalpel_results**  folder containing intermediate and final result files is generated during the execution.
-
 **Be careful to delete the work directory containing nextflow temporary files** when scalpel runs all its processs sucessfully and you don’t plan to relaunch scalpel with modified parameters. (This folder can fill an high memory physical space depending of the size of input files analyzed)
 
 
-### Results
+### Results - Downstream analysis
 
 #### Fragments distribution on transcriptomic space
-During the Nextflow execution or at the end, an image file (BINS_PROB.jpeg) showing the distribution of the fragments (reads associated to the same Barcode and UMI tag) in the transcriptomic space is generated in the  **scalpel_results/reads/probability/**. Depending of the experiment, the  **[–-gene_fraction]** , **[–-dt_threshold]**  or **[–-binsize]** can be modified in order to get a good fit between the fragment counts distribution and the empiric distribution (reads counts by intervals). This file is located in  **scalpel_results/reads/probability/BINS_PROB.pdf**.
+During the Nextflow execution or at the end, an image file (BINS_PROB.jpeg) showing the distribution of the fragments (reads associated to the same Barcode and UMI tag) in the transcriptomic space is generated in the  **results/reads/probability/**. Depending of the experiment, the  **[–-gene_fraction]** , **[–-dt_threshold]**  or **[–-binsize]** can be 
+modified in order to get a good fit between the fragment counts distribution and the empiric distribution (reads counts by intervals). This file is located in  **results/reads/probability/BINS_PROB.pdf**.
 
 <br />
 <div align="left">
@@ -176,10 +168,10 @@ library(data.table)
 library(dplyr)
 library(Gviz)
 #source the script scalpelin into the scalpel folder
-source("SCALPEL/src/scalpelib.R")
+source("SCALPEL/src/scalpelib_library.R")
 
 #Paths
-TRANSCRIPT_COUNTS_MATRIX_SCALPEL_FOLDER_PATH  <- "scalpel_results/reads/apa_dge/APADGE.txt"
+TRANSCRIPT_COUNTS_MATRIX_SCALPEL_FOLDER_PATH  <- "results/reads/apa_dge/APADGE.txt"
 
 #Create a Seurat object of the estimated transcript counts matrix
 TRANSCRIPT_COUNTS_MATRIX <- read.table(file=TRANSCRIPT_COUNTS_MATRIX_SCALPEL_FOLDER_PATH, sep="\t", header=T, row.names=1)
@@ -282,7 +274,7 @@ We can look for the Isoform coverage expression between the specific clusters. T
 samtools_path = "/Users/franz/opt/anaconda3/envs/scalpel_env/bin/samtools"
 BCTAG = "CB:"
 #indicate the filtered BAMFILE preseent in the SCALPEL results folder
-BAMFILE_PATH = "scalpel_results/reads/filtered_bam/final.bam"
+BAMFILE_PATH = "results/reads/filtered_bam/final.bam"
 GTF_PATH = "~/CEPH/users/fake/SHARED_files/gencode.vM10.annotation.gtf"
 
 # let's split the BAM file according to the clusters and filter the associated reads
@@ -377,4 +369,3 @@ Project Link: [SCALPEL Github](https://github.com/p-CMRC-LAB/SCALPEL)
 ## Paper
 
 Paper writing ongoing...
-
