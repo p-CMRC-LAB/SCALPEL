@@ -107,19 +107,7 @@ process dge_generation{
 		tuple val(sample_id), path("${sample_id}_APADGE.txt"), path("${sample_id}_seurat.RDS")
 	
 	script:
-	if (params.sequencing == "dropseq")
 		"""
-		#Merge ALL cells prediction with DGE table
-		python3 ${baseDir}/src/merge_DGE_PRED.py ${isoforms} ${raw_dge} ${sample_id}_APADGE.txt
-
-		#merge it into seurat object
-		Rscript ${baseDir}/src/APAtoseurat.R ${sample_id}_APADGE.txt ${sample_id} ${sample_id}_seurat.RDS
-		"""
-	
-	else
-		"""
-		#preprocess h5 file
-		#Rscript ${baseDir}/src/processh5.R ${raw_dge} DGE.txt
 		#Merge ALL cells prediction with DGE table
 		python3 ${baseDir}/src/merge_DGE_PRED.py ${isoforms} ${raw_dge} ${sample_id}_APADGE.txt
 

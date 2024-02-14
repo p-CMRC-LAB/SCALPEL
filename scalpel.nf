@@ -260,6 +260,7 @@ workflow {
 
         /* Parsing of 10X repository */
         chromium_repo_processing("${params.samples}")
+        chromium_repo_processing.out.count().view()
         reads_processing(annotation_preprocessing.out.selected_isoforms, chromium_repo_processing.out.sample_links_ch)
 
         /* internalp filtering processing (3) */

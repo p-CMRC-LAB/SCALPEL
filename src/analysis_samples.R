@@ -51,8 +51,11 @@ if(args$CLUSTERS == "NULL"){
 
 #Differential analysis (3)
 #*********************
-my_isoforms = Find_isoforms(seurat.obj, condition="Clusters", pval_adjusted=0.05, threshold_tr_abundance = 0.20)
-
+if(n_distinct(seurat.obj$Clusters) == 1){
+	my_isoforms = data.table(output="Provide more condition with levels > 1 for differential isoform usage analysis")
+}else{
+	my_isoforms = Find_isoforms(seurat.obj, condition="Clusters", pval_adjusted=0.05, threshold_tr_abundance = 0.20)
+}
 
 #Writing differential analysis table (4)
 #***********************************
