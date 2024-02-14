@@ -65,6 +65,7 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
   print("P.value adjusting......")
   
   #filter
+  RES_TAB$p_value.adjusted = p.adjust(RES_TAB$p_value, method="BH")
   RES_TAB_SIGNIF = RES_TAB %>% filter(p_value.adjusted < pval_adjusted)
   RES_TAB_SIGNIF$gene_tr = rownames(RES_TAB_SIGNIF)
   RES_TAB_SIGNIF$transcript = stringr::str_split_fixed(RES_TAB_SIGNIF$gene_tr,pattern = "\\*\\*\\*",n=2)[,2]

@@ -46,7 +46,7 @@ log.info """\
         - sequencing type (required): ${params.sequencing}
 
         Optional:
-        - threads ${params.threads}
+        - clusters of cells [--clusters]
         - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp): ${params.dt_threshold}
         - transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional, default 30bp): ${params.dt_exon_end_threshold}
         - minimal distance of Ip from isoform 3'ends (optional): ${params.isoform_end_ip_threshold}
@@ -75,6 +75,7 @@ if ( params.samples == null | params.reads == null)
 
 /* Include subworkflow modules */
 /* *************************** */
+include { get_10X_sampleIDs; read_10Xrepo } from './src/loading_10X_files.nf'
 include { salmon_indexing; salmon_bulk_quantification; tpm_bulk_average; gtf_splitting_bedfile_conversion; isoform_selection_weighting } from './src/annotation_processing.nf'
 include { bam_splitting; bedfile_conversion; reads_mapping_filtering } from './src/reads_processing.nf'
 include { ip_splitting; ip_filtering } from './src/internalp_filtering.nf'
@@ -104,6 +105,27 @@ workflow annotation_preprocessing {
         selected_isoforms = isoform_selection_weighting.out
 }
 
+
+/* Preprocessing of annotation files */
+/* ********************************* */
+workflow chromium_repo_processing {
+
+    take:
+        repository_path
+
+    main:
+        get_10X_sampleIDs(repository_path)
+
+        /* extract sampleIDs and associated paths */
+        get_10X_sampleIDs.out.flatten().combine(Channel.from(repository_path)).set{ sample_ids }
+        read_10Xrepo(sample_ids)
+
+        /* formatting */
+        read_10Xrepo.out.map{ it = [it[0], [it[1], it[2], it[3], it[4]]] }.set{ sample_ids_ch }
+
+    emit:
+        sample_links_ch = sample_ids_ch
+}
 
 /* Processing of reads */
 /* ******************* */
@@ -227,27 +249,55 @@ workflow {
 
     /* Input files */
     /* Input fastq reads */
-    read_pairs_ch = Channel.fromFilePairs( "${params.reads}/*{1,2}.fastq.gz", checkIfExists: true )
-    /* It is important that the samples extension get settled as *.bam / *.bai / *.barcodes / *.counts */
-    sample_links_ch = Channel.fromFilePairs( "${params.samples}/*{.bam,.bam.bai,.barcodes.txt,.counts.txt}", size: 4, checkIfExists: true )
+    read_pairs_ch = Channel.fromFilePairs( "${params.reads}/*{1,2}_001.fastq.gz", checkIfExists: true )
 
     /* annotation preprocessing (1) */
     annotation_preprocessing(params.transcriptome, params.gtf, read_pairs_ch)
 
     /* reads_processing (2) */
-    reads_processing(annotation_preprocessing.out.selected_isoforms, sample_links_ch)
+    /* Chromium */
+    if ( params.sequencing == "chromium" ) {
 
-    /* internalp filtering processing (3) */
-    internalpriming_filtering(reads_processing.out.mappeds_reads)
+        /* Parsing of 10X repository */
+        chromium_repo_processing("${params.samples}")
+        reads_processing(annotation_preprocessing.out.selected_isoforms, chromium_repo_processing.out.sample_links_ch)
 
-    /* isoform quantification (4) */
-    isoform_quantification(internalpriming_filtering.out, sample_links_ch.map{ sample_id, paths -> tuple( sample_id, paths[3])})
+        /* internalp filtering processing (3) */
+        internalpriming_filtering(reads_processing.out.mappeds_reads)
 
-    /* results (4) */
-    results(reads_processing.out.splitted_bams, internalpriming_filtering.out.filtered_reads)
+        /* isoform quantification (4) */
+        isoform_quantification(internalpriming_filtering.out, chromium_repo_processing.out.sample_links_ch.map{ sample_id, paths -> tuple( sample_id, paths[3])})
 
-    /* analysis (5) */
-    downstream_analysis(isoform_quantification.out)
+        /* results (5) */
+        results(reads_processing.out.splitted_bams, internalpriming_filtering.out.filtered_reads)
+
+        /* analysis (6) */
+        if ( params.clusters != null )
+            downstream_analysis(isoform_quantification.out)
+
+    }
+
+    /* Dropseq */
+    if ( params.sequencing == "dropseq" ) {
+
+        /* It is important that the samples extension get settled as *.bam / *.bai / *.barcodes / *.counts */
+        sample_links_ch = Channel.fromFilePairs( "${params.samples}/*{.bam,.bam.bai,.barcodes.txt,.counts.txt}", size: 4, checkIfExists: true )    
+        reads_processing(annotation_preprocessing.out.selected_isoforms, sample_links_ch)
+
+        /* internalp filtering processing (3) */
+        internalpriming_filtering(reads_processing.out.mappeds_reads)
+
+        /* isoform quantification (4) */
+        isoform_quantification(internalpriming_filtering.out, sample_links_ch.map{ sample_id, paths -> tuple( sample_id, paths[3])})
+
+        /* results (5) */
+        results(reads_processing.out.splitted_bams, internalpriming_filtering.out.filtered_reads)
+
+        /* analysis (6) */
+        if ( params.clusters != null )
+            downstream_analysis(isoform_quantification.out)
+
+    }
 
 }
 
