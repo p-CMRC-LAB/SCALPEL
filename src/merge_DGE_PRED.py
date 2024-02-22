@@ -18,7 +18,6 @@ args = parser.parse_args()
 #Open files
 print('Files opening...')
 predictions = pd.read_csv(args.PRED_path, names = ["bc","gene_name","gene_id","transcript_name","transcript_id","tr_prob"], sep="\t", skiprows = 1)
-print(predictions)
 
 print('dge...')
 dge = pd.read_csv(args.DGE_path, sep="\t")
@@ -27,7 +26,6 @@ dge = dge.rename(columns = {'GENE':'gene_name'})
 #melt dge table
 print('melting table...')
 dge = dge.melt(id_vars='gene_name')
-print(dge)
 
 predictions["bc_gn"] = predictions.bc + "_" + predictions.gene_name
 dge["bc_gn"] = dge.variable + "_" + dge.gene_name

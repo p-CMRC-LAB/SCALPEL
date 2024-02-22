@@ -90,7 +90,7 @@ process cells_merging{
 
 	script:
 		"""
-		Rscript ${baseDir}/src/merge_pred_cells.R \$PWD ${sample_id}_isoforms_quantified.txt
+		Rscript ${baseDir}/src/merge_pred_cells.R \$PWD ${sample_id}_isoforms_quantified.txt ${params.threads}
 		"""
 }
 

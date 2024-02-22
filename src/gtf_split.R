@@ -2,7 +2,6 @@
 
 library(argparse)
 library(dplyr)
-library(doParallel)
 library(data.table)
 
 #ArgumentParser

@@ -24,9 +24,9 @@ args = parser$parse_args()
 THRESHOLD_IP_DIST = as.numeric(args$threshold_dist)
 
 #reads
-reads = fread(args$bed, nThread =2)
+reads = fread(args$bed, nThread =1)
 #ipdb
-ipdb = fread(args$ip_file, col.names = c("seqnames","start.ip","end.ip","c4","c5","strand.ip"), nThread=2)
+ipdb = fread(args$ip_file, col.names = c("seqnames","start.ip","end.ip","c4","c5","strand.ip"), nThread=1)
 
 
 #Filter Internal priming sites

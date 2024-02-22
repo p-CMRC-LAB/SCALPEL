@@ -13,7 +13,7 @@ args = parser$parse_args()
 
 #open file
 print("open files...")
-bed = fread(args$bedf, col.names= c("seqnames","start.rd","end.rd","strand.rd","read.id","frag.id"), nThread = 2)
+bed = fread(args$bedf, col.names= c("seqnames","start.rd","end.rd","strand.rd","read.id","frag.id"), nThread = 1)
 # colnames(bed) = c("chr","Start","End","read_id","Strand","bc","umi")
 
 #discard duplicates

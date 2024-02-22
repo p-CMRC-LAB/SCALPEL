@@ -36,7 +36,7 @@ process merge_extracted_readsids {
         #get files
         all.files = list.files(".", pattern="*_reads_selected.txt", full.names=T)
         #reading
-        all.reads = Reduce(rbind,lapply(all.files, function(x) fread(x, col.names = c("read.id","gene_name","transcript_name"))))
+        all.reads = lapply(all.files, function(x) fread(x, col.names = c("read.id","gene_name","transcript_name")), nThread=1) %>% rbindlist()
         #writing
         saveRDS(all.reads, file='${sample_id}_reads_selected.RDS')
         """
@@ -78,17 +78,15 @@ process merging_results {
 
         #merge all the bams files (1)
         #========================
-        samtools merge -@ 10 -f -o final1.bam ${bamfiles}
-        samtools sort -@ 10 final1.bam > ${sample_id}.filtered.bam
+        samtools merge -@ 1 -f -o final1.bam ${bamfiles}
+        samtools sort -@ 1 final1.bam > ${sample_id}.filtered.bam
         samtools index ${sample_id}.filtered.bam
         rm final1.bam
 
 
         # ANNOTATIONS
-        # ============
-
+        
         #collect all ips (2)
-        #===============
         echo "seqnames	start_ip	end_ip	strand	exon_id	start	end	gene_name	transcript_name	exon_ind	start_rel	end_rel	rel_start_ip	rel_end_ip	dist_END_ip" > ${sample_id}_internalp.txt
         cat *_mapped.ipdb >> ${sample_id}_internalp.txt
         """

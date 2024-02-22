@@ -25,7 +25,7 @@ process bam_splitting {
                 #Filter reads , Remove duuplicates and split by chromosome
                 #a) filter reads...
                 zcat -f ${sample[2]} > bc.txt
-                samtools view -@ 4 -b ${sample[0]} ${chr} -D XC:bc.txt --keep-tag "XC,XM" | samtools sort > tmp.bam
+                samtools view -@ 1 -b ${sample[0]} ${chr} -D XC:bc.txt --keep-tag "XC,XM" | samtools sort > tmp.bam
                 #Remove all PCR duplicates ...
                 samtools markdup tmp.bam ${chr}.bam -r --barcode-tag XC --barcode-tag XM
                 #delete all empty files ...
@@ -42,7 +42,7 @@ process bam_splitting {
                 #============
                 #Filter reads , Remove duuplicates and split by chromosome
                 zcat -f ${sample[2]} | sort -u > bc.txt
-                samtools view -@ 4 -b ${sample[0]} ${chr} -D CB:bc.txt --keep-tag "CB,UB" | samtools sort > tmp.bam
+                samtools view -@ 1 -b ${sample[0]} ${chr} -D CB:bc.txt --keep-tag "CB,UB" | samtools sort > tmp.bam
                 #Remove all PCR duplicates ...
                 samtools markdup tmp.bam ${chr}.bam -r --barcode-tag CB --barcode-tag UB
 

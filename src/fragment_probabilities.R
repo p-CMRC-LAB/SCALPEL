@@ -20,8 +20,8 @@ parser$add_argument('output_path', type="character", help='output')
 args = parser$parse_args()
 
 #file opening
-reads = fread(args$reads_path)
-probs = fread(args$probs_path, col.names = c("dist_END","counts","probs_bin"))
+reads = fread(args$reads_path, nThread =1)
+probs = fread(args$probs_path, col.names = c("dist_END","counts","probs_bin"), nThread =1)
 
 #joining
 reads = left_join(reads, probs, by = c("dist_END"))

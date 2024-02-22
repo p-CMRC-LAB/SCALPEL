@@ -20,10 +20,10 @@ TRANSCRIPTOMIC_DISTANCE = as.numeric(args$tr_distance)
 
 #Reads
 print("opening...")
-bed.input = fread(args$bed, col.names = c("seqnames", "start.rd", "end.rd", "strand.rd", "read.id", "frag.id", "splice", "nb_splices"), nThread = 2)
+bed.input = fread(args$bed, col.names = c("seqnames", "start.rd", "end.rd", "strand.rd", "read.id", "frag.id", "splice", "nb_splices"), nThread = 1)
 bed.gr = bed.input %>% GenomicRanges::makeGRangesFromDataFrame(start.field = "start.rd", end.field = "end.rd", strand.field = "strand.rd", seqnames.field = "seqnames", keep.extra.columns = T)
 #exons
-exons.input = fread(args$exons, nThread = 2)
+exons.input = fread(args$exons, nThread = 1)
 exons.gr =  exons.input %>% GenomicRanges::makeGRangesFromDataFrame(keep.extra.columns = T)
 
 
