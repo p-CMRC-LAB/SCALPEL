@@ -236,4 +236,4 @@ gtf = gtf %>% arrange(seqnames,start,end,strand)
 
 # h. write processed GTF into a file
 print("writing...")
-fwrite(gtf, file = args$OUTPUT, sep="\t")
+fwrite(gtf, file = args$OUTPUT, sep="\t", nThread=1)

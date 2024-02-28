@@ -59,5 +59,5 @@ if(n_distinct(seurat.obj$Clusters) == 1){
 
 #Writing differential analysis table (4)
 #***********************************
-fwrite(my_isoforms, file=args$OUTPUT, sep="\t")
+fwrite(my_isoforms, file=args$OUTPUT, sep="\t", nThread=1)
 saveRDS(seurat.obj, file="final_seurat_obj.RDS")

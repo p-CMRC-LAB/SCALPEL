@@ -60,5 +60,5 @@ cell = left_join(cell,res)
 cell = cell %>% dplyr::select(bc,gene_name,gene_id,transcript_name,transcript_id,rel_abund)
 
 #writing
-fwrite(cell,file = args$output_path, sep="\t", col.names = F, row.names = F)
+fwrite(cell,file = args$output_path, sep="\t", col.names = F, row.names = F, nThread=1)
 

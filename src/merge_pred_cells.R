@@ -31,9 +31,6 @@ RES_all <- lapply(pred_files, function(x){
   pred = fread(x, nThread =1)
 }) %>% rbindlist()
 
-#Merging
-# print("Files merging")
-# RES_all = do.call(rbind, RES)
 
 #writing
 print("Writing...")

@@ -53,4 +53,4 @@ reads$umi = str_replace(reads$umi, pattern = "XM:Z:","")
 reads$umi = str_replace(reads$umi, pattern = "UB:Z:","")
 
 #writing
-fwrite(reads, file=args$output_path, sep="\t", col.names=F, row.names=F)
+fwrite(reads, file=args$output_path, sep="\t", col.names=F, row.names=F, nThread=1)

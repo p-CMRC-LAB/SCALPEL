@@ -9,6 +9,9 @@ process bam_splitting {
 	tag "${sample_id}, ${chr}"
 	publishDir "./results/reads_processing/bam_splitting/${sample_id}"
     maxForks params.cpus
+    cpus params.cpus
+    maxForks params.cpus
+    cache true
 
 	input: 
         tuple val(chr), val(sample_id), file(sample)
@@ -29,6 +32,7 @@ process bam_splitting {
                 #Remove all PCR duplicates ...
                 samtools markdup tmp.bam ${chr}.bam -r --barcode-tag XC --barcode-tag XM
                 #delete all empty files ...
+                rm tmp.bam
                 samtools view ${chr}.bam | head -2 > check
                 if [ -s check ]; then
                     echo "ok"
@@ -45,8 +49,8 @@ process bam_splitting {
                 samtools view -@ 1 -b ${sample[0]} ${chr} -D CB:bc.txt --keep-tag "CB,UB" | samtools sort > tmp.bam
                 #Remove all PCR duplicates ...
                 samtools markdup tmp.bam ${chr}.bam -r --barcode-tag CB --barcode-tag UB
-
                 #delete all empty files ...
+                rm tmp.bam
                 samtools view ${chr}.bam | head -2 > check
                 if [ -s check ]; then
                     echo "ok"
@@ -61,6 +65,8 @@ process bedfile_conversion{
 	tag "${sample_id}, ${chr}"
 	publishDir "./results/reads_processing/bedfile_conversion/${sample_id}"
     maxForks params.cpus
+    cpus params.cpus
+    cache true
 
 	input:
         tuple val(sample_id), val(chr), path(bam)
@@ -75,6 +81,9 @@ process bedfile_conversion{
 
             #Extract relevant metadata infos and sort for overlapping purposes (2)
             Rscript ${baseDir}/src/subset_metadata.R temp_file ${chr}.bed
+
+            #delete tmp files (3)
+            rm temp_file
         """
 }
 
@@ -83,6 +92,8 @@ process reads_mapping_filtering {
 	tag "${sample_id}, ${chr}, ${bed}, ${exons}"
 	publishDir "./results/reads_processing/mapping_filtering/${sample_id}"
     maxForks params.cpus
+    cpus params.cpus
+    cache true
 
 	input:
         tuple val(sample_id), val(chr), path(bed), path(exons), path(exons_unique)

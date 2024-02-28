@@ -4,6 +4,8 @@
 process extraction_readids {
     tag "${sample_id}, ${chr}"
     maxForks params.cpus
+    cpus params.cpus
+    cache true
 
     input:
         tuple val(sample_id), val(chr), path(reads)
@@ -21,6 +23,8 @@ process merge_extracted_readsids {
     tag "${sample_id}"
     publishDir "./results/final_results/${sample_id}"
     maxForks params.cpus
+    cpus params.cpus
+    cache true
 
     input:
         tuple val(sample_id), path(reads)
@@ -46,6 +50,8 @@ process merge_extracted_readsids {
 process bam_filtering {
 	tag "${sample_id}, ${chr}"
     maxForks params.cpus
+    cpus params.cpus
+    cache true
 	
     input:
         tuple val(sample_id), val(chr), path(bam), path(ipdb), path(readid)
@@ -64,6 +70,8 @@ process merging_results {
     tag "${sample_id}"
 	publishDir "./results/final_results/${sample_id}", mode: 'copy'
     maxForks params.cpus
+    cpus params.cpus
+    cache true
 
 	input:
         tuple val(sample_id), file(bamfiles), file(ipdbs)

@@ -140,4 +140,4 @@ reads = reads %>% dplyr::select(seqnames,start.rd,end.rd,start,end,width.rd,tr_l
 
 #Writing
 #=======
-fwrite(reads, file=args$output_path, sep="\t", row.names=F)
+fwrite(reads, file=args$output_path, sep="\t", row.names=F, nThread=1)

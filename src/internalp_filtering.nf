@@ -9,6 +9,8 @@ process ip_splitting {
     tag "${chr}"
 	publishDir "./results/internalp_filtering/ipdb_splitted"
     maxForks params.cpus
+    cpus params.cpus
+    cache true
 
     input:
         tuple val(chr), path(ipref)
@@ -28,6 +30,8 @@ process ip_filtering {
     tag "${sample_id}, ${chr}, ${ipdb}"
 	publishDir "./results/internalp_filtering/internalp_filtered/${sample_id}"
     maxForks params.cpus
+    cpus params.cpus
+    cache true
 
     input:
         tuple val(sample_id), val(chr), path(reads), path(ipdb)

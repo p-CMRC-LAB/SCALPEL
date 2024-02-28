@@ -17,8 +17,8 @@ params.dt_exon_end_threshold = 30
 params.isoform_end_ip_threshold = 60
 params.gene_fraction = "98%"
 params.binsize = 20
-params.cpus = 30
-params.threads = 30
+params.cpus = 10
+params.threads = 10
 params.clusters = null
 
 
@@ -51,7 +51,7 @@ log.info """\
         - transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional, default 30bp): ${params.dt_exon_end_threshold}
         - minimal distance of Ip from isoform 3'ends (optional): ${params.isoform_end_ip_threshold}
         - params.threads [--threads] (default 30): ${params.threads}
-        - params.threads [--cpus] (default 30): ${params.cpus}
+        - params.cpus [--cpus] (default 30): ${params.cpus}
 
     
     - Results:

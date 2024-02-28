@@ -19,5 +19,5 @@ gtf = rtracklayer::import(args$GTF_PATH) %>% data.frame() %>% filter(type=="exon
 #=======
 print("file writing...")
 res = lapply(split(gtf, gtf$seqnames), function(x){
-    fwrite(x, file = paste0(x$seqnames[1],".gtf"), sep="\t")
+    fwrite(x, file = paste0(x$seqnames[1],".gtf"), sep="\t", nThread=1)
 })

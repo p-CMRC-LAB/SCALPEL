@@ -6,6 +6,8 @@ process probability_distribution {
 	tag "${sample_id}"
 	publishDir "./results/isoform_quantification/fragment_probabilities/${sample_id}", overwrite:'true', mode: 'copy'
 	maxForks params.cpus
+	cpus params.cpus
+	cache true
 
 	input:
 		tuple val(sample_id), file(reads)
@@ -17,6 +19,9 @@ process probability_distribution {
         """
         cat *_unique.reads > all_unique.reads
         Rscript ${baseDir}/src/compute_prob.R all_unique.reads ${params.gene_fraction} ${params.binsize} ${sample_id}_probabilities.txt ${sample_id}_probabilities.pdf
+
+        #delete temp files
+        rm all_unique.reads
         """
 }
 
@@ -26,6 +31,8 @@ process fragment_probabilities{
 	tag "${sample_id},${chr}"
 	publishDir "./results/isoform_quantification/fragment_probabilities/${sample_id}", overwrite: true, mode: 'copy'
 	maxForks params.cpus
+	cpus params.cpus
+	cache true
 
 	input:
 		tuple val(sample_id), val(chr), path(reads), path(probabilities)
@@ -45,6 +52,8 @@ process fragment_probabilities{
 process cells_splitting{
 	tag "${sample_id}"
 	maxForks params.cpus
+	cpus params.cpus
+	cache true
 	
 	input:
 		tuple val(sample_id), file(reads)
@@ -61,8 +70,9 @@ process cells_splitting{
 
 process em_algorithm{
 	tag "${sample_id}, ${cell.baseName}"
-	executor 'local'
 	maxForks params.cpus
+	cpus params.cpus
+	cache true
 
 	input:
 		tuple val(sample_id), path(cell)
@@ -81,6 +91,8 @@ process cells_merging{
 	tag "${sample_id}"
 	publishDir "./results/isoform_quantification/fragment_probabilities/${sample_id}", overwrite: true
 	maxForks params.cpus
+	cpus params.cpus
+	cache true
 
 	input:
 		tuple val(sample_id), file(pred_cells)
@@ -99,6 +111,8 @@ process dge_generation{
 	tag "${sample_id}, ${isoforms}, ${raw_dge}"
 	publishDir "./results/final_results/${sample_id}", overwrite: true, mode: 'copy'
 	maxForks params.cpus
+	cpus params.cpus
+	cache true
 
 	input:
 		tuple val(sample_id), path(isoforms), path(raw_dge)

@@ -54,4 +54,4 @@ A = qf %>% group_by(gene_name,Sample) %>%
 qf = dplyr::distinct(A, gene_name, transcript_id, transcript_name, Length, NumReads)
 
 #writing
-fwrite(qf, sep="\t", row.names=F, file =args$output_path)
+fwrite(qf, sep="\t", row.names=F, file =args$output_path, nThread=1)

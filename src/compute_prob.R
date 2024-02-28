@@ -82,4 +82,4 @@ ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, h
 # [Writing]
 # --------
 ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, height = 8.27)
-fwrite(interval.tab[,c('transcriptomic_distance','counts','probs_bin')], file = args$OUTPUT_PROB, sep="\t", col.names = F)
+fwrite(interval.tab[,c('transcriptomic_distance','counts','probs_bin')], file = args$OUTPUT_PROB, sep="\t", col.names = F, nThread=1)

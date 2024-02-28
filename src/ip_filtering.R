@@ -85,6 +85,6 @@ unique_genes = (reads %>% distinct(gene_name,transcript_name) %>%
 reads_unique = reads %>% filter(gene_name %in% unique_genes) %>% distinct()
 
 #write file
-fwrite(reads, file=args$output_path, sep="\t", row.names=F, col.names=T, nThread=2)
-fwrite(reads_unique, file=args$output_bed_unique, sep="\t", row.names=F, col.names=F,  nThread=2)
+fwrite(reads, file=args$output_path, sep="\t", row.names=F, col.names=T, nThread=1)
+fwrite(reads_unique, file=args$output_bed_unique, sep="\t", row.names=F, col.names=F,  nThread=1)
 
