@@ -68,6 +68,8 @@ if(length(ipdb)!=0){
     reads$fidt = paste0(reads$frag.id, "_", reads$transcript_name)
     reads = reads %>% filter(!fidt %in% targets$fidt)
     reads = reads[,-c("fidt")]
+}else{
+    reads = dplyr::select(reads, !fidt)
 }
 
 print("writing...")

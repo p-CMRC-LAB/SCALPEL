@@ -8,9 +8,6 @@
 process bam_splitting {
 	tag "${sample_id}, ${chr}"
 	publishDir "./results/reads_processing/bam_splitting/${sample_id}"
-    maxForks params.cpus
-    cpus params.cpus
-    maxForks params.cpus
     cache true
 
 	input: 
@@ -64,8 +61,6 @@ process bam_splitting {
 process bedfile_conversion{
 	tag "${sample_id}, ${chr}"
 	publishDir "./results/reads_processing/bedfile_conversion/${sample_id}"
-    maxForks params.cpus
-    cpus params.cpus
     cache true
 
 	input:
@@ -91,8 +86,6 @@ process bedfile_conversion{
 process reads_mapping_filtering {
 	tag "${sample_id}, ${chr}, ${bed}, ${exons}"
 	publishDir "./results/reads_processing/mapping_filtering/${sample_id}"
-    maxForks params.cpus
-    cpus params.cpus
     cache true
 
 	input:

@@ -6,7 +6,6 @@
 process get_10X_sampleIDs{
 	tag "${sample_repo.baseName}"
     cpus params.cpus
-    maxForks params.cpus
     cache true
 
     input:
@@ -31,8 +30,6 @@ process read_10Xrepo{
 	tag "${sample_id}"
 	publishDir "./results/sample_files/", overwrite: true
 	cache true
-	cpus params.cpus
-	maxForks params.cpus
 
 	input:
 		tuple path(sample_id), val(sample_repo)

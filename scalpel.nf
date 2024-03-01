@@ -50,8 +50,8 @@ log.info """\
         - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp): ${params.dt_threshold}
         - transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional, default 30bp): ${params.dt_exon_end_threshold}
         - minimal distance of Ip from isoform 3'ends (optional): ${params.isoform_end_ip_threshold}
-        - params.threads [--threads] (default 30): ${params.threads}
-        - params.cpus [--cpus] (default 30): ${params.cpus}
+        - params.threads [--threads] (default 10): ${params.threads}
+        - params.cpus [--cpus] (default 10): ${params.cpus}
 
     
     - Results:

@@ -6,8 +6,8 @@
 
 # [Script for Function needed in Scalpel analysis]
 # ------------------------------------------------
-library(GenomicRanges)
-library(Gviz)
+require(GenomicRanges)
+require(Gviz)
 
 Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident", assay="RNA", threshold_tr_abundance = 0.15){
   # ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
   }
 
   #0. Ideogram
-  axisTrack <- GenomeAxisTrack(genome=genome_sp)
+  axisTrack <- Gviz::GenomeAxisTrack(genome=genome_sp)
 
   #1. Build genome table & Track
   print("GenomeTrack building...")
@@ -159,16 +159,15 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
   #1bis : Annotation Track building
   if(!is.null(annot_tab)){
     curr.tab = dplyr::filter(annot_tab, start>=starts & end<=ends)
-    Atrack = AnnotationTrack(GenomicRanges::makeGRangesFromDataFrame(curr.tab), name = "Peaks",
+    Atrack = Gviz::AnnotationTrack(GenomicRanges::makeGRangesFromDataFrame(curr.tab), name = "Peaks",
                              chromosome = chrom, fill="olivedrab", id=curr.tab$name,
                              background.title="black", featureAnnotation = "id", fontcolor.group="black")
   }else{
-    Atrack = AnnotationTrack(chromosome = chrom, background.title="black", name = "Peaks")
+    Atrack = Gviz::AnnotationTrack(chromosome = chrom, background.title="black", name = "Peaks")
   }
 
   #2. Build Alignment Track
   print("DataTack building...")
-  print("oooook")
   Atracks.res = lapply(1:length(bamfiles), function(x){
     print(names(bamfiles)[x])
     #get coverage
@@ -176,7 +175,7 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
     cov.exp = system(paste0(samtools.bin," depth -b coords.txt current.bam > current.cov"))
     cov.tab = fread("current.cov", col.names = c("seqnames","start","depth")) %>% dplyr::filter(depth>=0)
     #dataTrack
-    curr.track = DataTrack(start = cov.tab$start, width=1, data = cov.tab$depth, chromosome = chrom, genome=genome_sp,
+    curr.track = Gviz::DataTrack(start = cov.tab$start, width=1, data = cov.tab$depth, chromosome = chrom, genome=genome_sp,
                            type=c("hist"), background.title="coral4", name = names(bamfiles)[x], col.histogram="blue")
     return(list(max.depth=max(cov.tab$depth), track=curr.track))
   })

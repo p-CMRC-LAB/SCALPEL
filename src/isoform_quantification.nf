@@ -5,8 +5,6 @@
 process probability_distribution {
 	tag "${sample_id}"
 	publishDir "./results/isoform_quantification/fragment_probabilities/${sample_id}", overwrite:'true', mode: 'copy'
-	maxForks params.cpus
-	cpus params.cpus
 	cache true
 
 	input:
@@ -30,8 +28,6 @@ process probability_distribution {
 process fragment_probabilities{
 	tag "${sample_id},${chr}"
 	publishDir "./results/isoform_quantification/fragment_probabilities/${sample_id}", overwrite: true, mode: 'copy'
-	maxForks params.cpus
-	cpus params.cpus
 	cache true
 
 	input:
@@ -51,8 +47,6 @@ process fragment_probabilities{
 
 process cells_splitting{
 	tag "${sample_id}"
-	maxForks params.cpus
-	cpus params.cpus
 	cache true
 	
 	input:
@@ -71,7 +65,6 @@ process cells_splitting{
 process em_algorithm{
 	tag "${sample_id}, ${cell.baseName}"
 	maxForks params.cpus
-	cpus params.cpus
 	cache true
 
 	input:
@@ -90,8 +83,6 @@ process em_algorithm{
 process cells_merging{
 	tag "${sample_id}"
 	publishDir "./results/isoform_quantification/fragment_probabilities/${sample_id}", overwrite: true
-	maxForks params.cpus
-	cpus params.cpus
 	cache true
 
 	input:
@@ -110,8 +101,6 @@ process cells_merging{
 process dge_generation{
 	tag "${sample_id}, ${isoforms}, ${raw_dge}"
 	publishDir "./results/final_results/${sample_id}", overwrite: true, mode: 'copy'
-	maxForks params.cpus
-	cpus params.cpus
 	cache true
 
 	input:

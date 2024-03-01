@@ -6,8 +6,6 @@
 
 process salmon_indexing{
     publishDir "./results/annotation_processing/salmon_indexing", overwrite: true
-    cpus params.cpus
-    maxForks params.cpus
     cache true
 
     input:
@@ -25,15 +23,13 @@ process salmon_indexing{
 process salmon_bulk_quantification{
     tag "${pair_id}"
     publishDir "./results/annotation_processing/salmon_bulk_quantification", overwrite: true
-    cpus params.cpus
-    maxForks params.cpus
     cache true
 
     input:
         path transcriptome_index
         path gtf_annotation_reference
         tuple val(pair_id), path(reads)
-        cpus params.threads
+        cpus params.cpus
 
     output:
         path "${pair_id}.sf"
@@ -49,8 +45,6 @@ process salmon_bulk_quantification{
 process tpm_bulk_average{
     tag "${bulk_quants}"
 	publishDir "./results/annotation_processing/salmon_bulk_quantification", overwrite: true, mode: 'copy'
-    cpus params.cpus
-    maxForks params.cpus
     cache true
 
 	input:
@@ -71,8 +65,6 @@ process tpm_bulk_average{
 process gtf_splitting_bedfile_conversion{
     publishDir "./results/annotation_processing/isoform_processing", overwrite: true
     cache true
-    cpus params.cpus
-    maxForks params.cpus
 
 	input:
         path gtf_annotation_reference
@@ -89,8 +81,6 @@ process gtf_splitting_bedfile_conversion{
 process isoform_selection_weighting{
     tag "${gtf.baseName}"
     publishDir "./results/annotation_processing/isoform_processing", overwrite: true, mode: 'copy'
-    cpus params.cpus
-    maxForks params.cpus
     cache true
 
 	input:

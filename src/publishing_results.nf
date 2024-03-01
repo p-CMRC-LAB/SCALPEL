@@ -3,8 +3,6 @@
 
 process extraction_readids {
     tag "${sample_id}, ${chr}"
-    maxForks params.cpus
-    cpus params.cpus
     cache true
 
     input:
@@ -14,7 +12,7 @@ process extraction_readids {
 
     script:
         """
-        awk -v OFS="\\t" 'NR > 1 {print \$14,\$19,\$21}' ${reads} | sort -u > ${chr}_reads_selected.txt
+        awk -v OFS="\\t" 'NR > 1 {print \$14,\$19,\$21}' ${reads} | sort -u -T . > ${chr}_reads_selected.txt
         """
 }
 
@@ -22,8 +20,6 @@ process extraction_readids {
 process merge_extracted_readsids {
     tag "${sample_id}"
     publishDir "./results/final_results/${sample_id}"
-    maxForks params.cpus
-    cpus params.cpus
     cache true
 
     input:
@@ -40,7 +36,7 @@ process merge_extracted_readsids {
         #get files
         all.files = list.files(".", pattern="*_reads_selected.txt", full.names=T)
         #reading
-        all.reads = lapply(all.files, function(x) fread(x, col.names = c("read.id","gene_name","transcript_name")), nThread=1) %>% rbindlist()
+        all.reads = lapply(all.files, function(x) fread(x, col.names = c("read.id","gene_name","transcript_name"), nThread=1)) %>% rbindlist()
         #writing
         saveRDS(all.reads, file='${sample_id}_reads_selected.RDS')
         """
@@ -49,8 +45,6 @@ process merge_extracted_readsids {
 
 process bam_filtering {
 	tag "${sample_id}, ${chr}"
-    maxForks params.cpus
-    cpus params.cpus
     cache true
 	
     input:
@@ -61,7 +55,7 @@ process bam_filtering {
 	script:
 	"""
 	#Filter bam file based on read id selected
-	samtools view -b -N ${readid} ${bam}  > ${chr}_ft.bam
+	samtools view -@ 1 -b -N ${readid} ${bam}  > ${chr}_ft.bam
 	"""
 }
 
@@ -69,8 +63,6 @@ process bam_filtering {
 process merging_results {
     tag "${sample_id}"
 	publishDir "./results/final_results/${sample_id}", mode: 'copy'
-    maxForks params.cpus
-    cpus params.cpus
     cache true
 
 	input:
@@ -88,7 +80,7 @@ process merging_results {
         #========================
         samtools merge -@ 1 -f -o final1.bam ${bamfiles}
         samtools sort -@ 1 final1.bam > ${sample_id}.filtered.bam
-        samtools index ${sample_id}.filtered.bam
+        samtools index -@ 1 ${sample_id}.filtered.bam
         rm final1.bam
 
 
