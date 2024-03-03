@@ -5,7 +5,6 @@
 
 process get_10X_sampleIDs{
 	tag "${sample_repo.baseName}"
-    cpus params.cpus
     cache true
 
     input:
