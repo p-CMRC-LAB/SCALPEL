@@ -16,6 +16,6 @@ args = parser$parse_args()
 
 #file opening and writing
 read.table(args$APA_PATH, sep="\t", header = T, row.names = 1) %>% 
-    Seurat::CreateSeuratObject(names.field = 1, min.cells = 10, min.features = 4, project = args$sample_name) %>%
+    Seurat::CreateSeuratObject(names.field = 1, min.cells = 0, min.features = 0, project = args$sample_name) %>%
     saveRDS(file=paste0(args$sample_name,"_seurat.RDS"))
 

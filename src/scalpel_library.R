@@ -1,13 +1,11 @@
 
 
 
-
-
-
 # [Script for Function needed in Scalpel analysis]
 # ------------------------------------------------
 require(GenomicRanges)
 require(Gviz)
+require(ggplot2)
 
 Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident", assay="RNA", threshold_tr_abundance = 0.15){
   # ---------------------------------------------------------------------------
@@ -18,17 +16,23 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
 
   #1/ Find genes with at least 2 transcripts
   print("Find genes with at least 2 transcripts...")
-  genes_tr_tab = (rownames(seurat.obj) %>% stringr::str_split_fixed(pattern = "\\*\\*\\*", n = 2)) %>% data.table()
-  genes_tr_tab$gene_tr = rownames(seurat.obj)
-  colnames(genes_tr_tab) = c("gene", "transcript", "gene_transcript")
-  counts_genes_tab = genes_tr_tab$gene %>% table() %>% data.table() %>% dplyr::filter(N > 1)
-  genes_tr_tab_filtered = genes_tr_tab %>% dplyr::filter(gene %in% counts_genes_tab$.) %>% arrange(gene_transcript)
+  my.genes = data.frame(gene_transcript = rownames(seurat.obj)) %>%
+    tidyr::separate(col=gene_transcript, into=c("gene","transcript"), sep = "\\*\\*\\*", remove = F) %>%
+    group_by(gene) %>%
+    mutate(nb.transcripts = n_distinct(transcript)) %>%
+    dplyr::filter(nb.transcripts>1) %>%
+    arrange(gene)
+  # genes_tr_tab = (rownames(seurat.obj) %>% stringr::str_split_fixed(pattern = "\\*\\*\\*", n = 2)) %>% data.table()
+  # genes_tr_tab$gene_tr = rownames(seurat.obj)
+  # colnames(genes_tr_tab) = c("gene", "transcript", "gene_transcript")
+  # counts_genes_tab = genes_tr_tab$gene %>% table() %>% data.table() %>% dplyr::filter(N > 1)
+  # genes_tr_tab_filtered = genes_tr_tab %>% dplyr::filter(gene %in% counts_genes_tab$.) %>% arrange(gene_transcript)
   
   #2/ Get Isoforms expression in the condition defined
   print("Get isoforms expression in the condition defined...")
-  ALL_expression = AggregateExpression(seurat.obj, features = genes_tr_tab_filtered$gene_transcript,
-                                       assays = assay, group.by = condition, verbose = T,
-                                       slot = 'count')[[assay]] %>% data.frame()
+  ALL_expression = AggregateExpression(subset(seurat.obj, features = my.genes$gene_transcript),
+                                       assays = assay, group.by = condition,
+                                       verbose = T, return.seurat = F)[[assay]] %>% data.frame()
   ALL_expression$only_gene = (rownames(ALL_expression) %>% stringr::str_split_fixed(pattern = "\\*\\*\\*", n = 2))[,1]
   ALL_expression$gene_tr = rownames(ALL_expression)
   #Split all the table by genes
@@ -76,20 +80,35 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
 }
 
 
-plot_relativeExp = function(seurat.obj, features, group.var, levels.group=NULL, ...){
-    #Function to plot with geom_boxplot relative isoform expression
-    Reduce(`+`, lapply(features, function(x) {
-        subsetted_expression = seurat.obj[x,]@meta.data %>% select(nCount_RNA, `group.var`)
-        subsetted_expression$nCount_RNA = (subsetted_expression$nCount_RNA / sum(subsetted_expression$nCount_RNA)) * 100
-        if(is.null(levels.group)){
-            print("no level reordering")
-        }else{
-            subsetted_expression[,group.var] = factor(subsetted_expression[,group.var], levels = levels.group)
-        }
-        ggplot(subsetted_expression, aes_string(group.var, "nCount_RNA")) +
-            geom_boxplot(aes_string(fill=group.var)) +
-            ggtitle(label = x) + theme_classic(base_size = 13)
-    })) + plot_layout(ncol = length(features))
+plot_relativeExp = function(seurat.obj, features, group.var, levels.group=NULL, assay="RNA", ...){
+  #Function to plot with geom_boxplot relative isoform expression
+  sub.obj = subset(seurat.obj, features=features)
+  
+  #extract transcripts
+  A = sub.obj[[assay]]$counts %>%
+    data.frame() %>%
+    mutate(gene_transcript=rownames(sub.obj)) %>%
+    melt() %>%
+    suppressWarnings()
+  
+  sub.obj$variable = rownames(sub.obj@meta.data)
+  A$group = dplyr::left_join(A, sub.obj@meta.data) %>% dplyr::select(group.var) %>% as.vector() %>% unlist()
+  A = arrange(A, variable)
+  print(A)
+
+  #Calculates relative expression
+  A.tab = filter(A, value>0) %>%
+    group_by(gene_transcript) %>%
+    mutate(perc = value / sum(value) * 100) %>%
+    arrange(gene_transcript,group) %>%
+    data.table()
+  
+  #Visualization
+  ggplot(A.tab, aes(group, perc, fill=gene_transcript)) +
+    geom_boxplot2(width = 0.5, width.errorbar = 0.1, color="gray20") +
+    theme_few(base_size = 12) +
+    scale_fill_calc() +
+    ggtitle("Isoform relative expression in cell types")
 }
 
 

@@ -10,6 +10,8 @@ nextflow.enable.dsl=2
 
 /* Define default params variables */
 /* ******************************* */
+params.barcodes = null
+params.clusters = null
 params.transcriptome = null
 params.reads = null
 params.dt_threshold = 1200
@@ -19,7 +21,7 @@ params.gene_fraction = "98%"
 params.binsize = 20
 params.cpus = 10
 params.threads = 10
-params.clusters = null
+
 
 
 log.info """\
@@ -46,10 +48,11 @@ log.info """\
         - sequencing type (required): ${params.sequencing}
 
         Optional:
+        - barcodes [--barcodes] (optional)
         - clusters of cells [--clusters]
         - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp): ${params.dt_threshold}
         - transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional, default 30bp): ${params.dt_exon_end_threshold}
-        - minimal distance of Ip from isoform 3'ends (optional): ${params.isoform_end_ip_threshold}
+        - minimal distance of Ip from isoform 3'ends (optional, 60): ${params.isoform_end_ip_threshold}
         - params.threads [--threads] (default 10): ${params.threads}
         - params.cpus [--cpus] (default 10): ${params.cpus}
 
