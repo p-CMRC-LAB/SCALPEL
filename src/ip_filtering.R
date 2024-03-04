@@ -64,12 +64,13 @@ if(length(ipdb)!=0){
     targets = ipdb %>% group_by(transcript_name) %>% filter(dist_END_ip == min(dist_END_ip)) %>% ungroup()
     targets = left_join(reads, targets[,c("rel_start_ip","rel_end_ip","transcript_name","gene_name","dist_END_ip")], multiple="all") %>%
         na.omit() %>%
-        filter((strand=="+" & rel_end_rd>dist_END_ip) | (strand=="-" & rel_start_rd>dist_END_ip))
+        dplyr::filter(rel_start_fg > dist_END_ip)
+        # filter((strand=="+" & rel_start_fg>dist_END_ip) | (strand=="-" & rel_start_fg>dist_END_ip))
     reads$fidt = paste0(reads$frag.id, "_", reads$transcript_name)
     reads = reads %>% filter(!fidt %in% targets$fidt)
-    reads = reads[,-c("fidt")]
+    reads = reads[,-c("fidt","rel_start_fg","rel_end_fg")]
 }else{
-    reads = dplyr::select(reads, !fidt)
+    reads = reads[,-c("fidt","rel_start_fg","rel_end_fg")]
 }
 
 print("writing...")

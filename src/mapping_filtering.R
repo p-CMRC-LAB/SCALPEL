@@ -120,14 +120,31 @@ rm(spliceds)
 #calculates relatives coordinates
 #================================
 print("calculate relative coords...")
-#pos strand
+
+#POSITIVE strand
 tab_pos = reads %>% filter(strand == "+")
 tab_pos = tab_pos %>% mutate(rel_start_rd = end_rel + (end - start.rd), rel_end_rd = end_rel + (end-end.rd))
 tab_pos$dist_END = tab_pos$rel_end_rd
-#neg_strand
+pos_targets = distinct(tab_pos, frag.id, read.id, start.rd, end.rd, rel_start_rd, rel_end_rd ,exon_id, strand) %>%
+    group_by(frag.id) %>%
+    mutate(rel_start_fg = min(rel_start_rd), rel_end_fg = max(rel_end_rd)) %>%
+    distinct(exon_id, frag.id, read.id, rel_start_fg, rel_end_fg)
+#merging
+tab_pos = left_join(tab_pos, pos_targets)
+tab_pos$dist_END = tab_pos$rel_end_fg
+
+#NEGATIVE strand
 tab_neg = reads %>% filter(strand == "-")
 tab_neg = tab_neg %>% mutate(rel_start_rd = end_rel - (end-start.rd), rel_end_rd = end_rel - (end-end.rd))
-tab_neg$dist_END = tab_neg$rel_start_rd
+neg_targets = distinct(tab_neg, frag.id, read.id, start.rd, end.rd, rel_start_rd, rel_end_rd ,exon_id, strand) %>%
+    group_by(frag.id) %>%
+    mutate(rel_start_fg = min(rel_start_rd), rel_end_fg = max(rel_end_rd)) %>%
+    distinct(exon_id, frag.id, read.id, rel_start_fg, rel_end_fg)
+#merging
+tab_neg = left_join(tab_neg, neg_targets)
+tab_neg$dist_END = tab_neg$rel_start_fg
+
+#Rbiding
 reads = rbind(tab_pos, tab_neg)
 
 #filtering based on distance
@@ -135,7 +152,7 @@ targets = (reads %>% filter(dist_END>TRANSCRIPTOMIC_DISTANCE))$fidt
 reads = reads %>% filter(!fidt %in% targets)
 
 #select columns
-reads = reads %>% dplyr::select(seqnames,start.rd,end.rd,start,end,width.rd,tr_length,start_rel,end_rel,rel_start_rd,rel_end_rd,dist_END,strand,read.id,frag.id,splice,nb.splices,gene_id,gene_name,transcript_id,transcript_name,exon_id,exon_number,collapsed_trs,bulk_weights,fidt)
+reads = reads %>% dplyr::select(seqnames,start.rd,end.rd,start,end,width.rd,tr_length,start_rel,end_rel,rel_start_rd,rel_end_rd,dist_END,strand,read.id,frag.id,splice,nb.splices,gene_id,gene_name,transcript_id,transcript_name,exon_id,exon_number,collapsed_trs,bulk_weights,fidt,rel_start_fg,rel_end_fg)
 
 
 #Writing
