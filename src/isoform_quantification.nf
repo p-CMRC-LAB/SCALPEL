@@ -64,7 +64,6 @@ process cells_splitting{
 
 process em_algorithm{
 	tag "${sample_id}, ${cell.baseName}"
-	maxForks params.cpus
 	cache true
 
 	input:

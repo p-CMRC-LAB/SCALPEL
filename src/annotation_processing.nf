@@ -6,7 +6,6 @@
 
 process salmon_indexing{
     publishDir "./results/annotation_processing/salmon_indexing", overwrite: true
-    cpus ${params.cpus}
     cache true
 
     input:
@@ -17,28 +16,26 @@ process salmon_indexing{
 
     script:
         """
-        salmon index --threads ${params.threads} --p ${params.cpus} -t ${transcriptome_reference} -i transcriptome_index --gencode 
+        salmon index --threads ${params.cpus} -t ${transcriptome_reference} -i transcriptome_index --gencode 
         """
 }
 
 process salmon_bulk_quantification{
     tag "${pair_id}"
     publishDir "./results/annotation_processing/salmon_bulk_quantification", overwrite: true
-    cpus ${params.cpus}
     cache true
 
     input:
         path transcriptome_index
         path gtf_annotation_reference
         tuple val(pair_id), path(reads)
-        cpus params.cpus
 
     output:
         path "${pair_id}.sf"
 
     script:
         """
-        salmon quant -i ${transcriptome_index} -l A -g ${gtf_annotation_reference} -1 ${reads[0]} -2 ${reads[1]} -o ${pair_id} --threads ${params.threads} --p ${params.cpus}
+        salmon quant -i ${transcriptome_index} -l A -g ${gtf_annotation_reference} -1 ${reads[0]} -2 ${reads[1]} -o ${pair_id} --threads ${params.cpus}
         mv ${pair_id}/quant.sf tmp.sf
         awk -v OFS="\t" 'NR > 1 {print \$0}' tmp.sf | sed "s/\$/\t${pair_id}/" > ${pair_id}.sf
         """

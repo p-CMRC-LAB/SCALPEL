@@ -80,21 +80,23 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
 }
 
 
-plot_relativeExp = function(seurat.obj, features, group.var, levels.group=NULL, assay="RNA", ...){
+plot_relativeExp = function(seurat.obj, features_in, group.var, levels.group=NULL, assay="RNA", ...){
   #Function to plot with geom_boxplot relative isoform expression
-  sub.obj = subset(seurat.obj, features=features)
+  # print(features_in)
+  # sub.obj = subset(seurat.obj, features=features_in)
+  # print(sub.obj)
+  # stop("test")
   
   #extract transcripts
-  A = sub.obj[[assay]]$counts %>%
+  A = seurat.obj[[assay]]$counts[features_in,] %>%
     data.frame() %>%
-    mutate(gene_transcript=rownames(sub.obj)) %>%
+    mutate(gene_transcript=features_in) %>%
     melt() %>%
     suppressWarnings()
   
-  sub.obj$variable = rownames(sub.obj@meta.data)
-  A$group = dplyr::left_join(A, sub.obj@meta.data) %>% dplyr::select(group.var) %>% as.vector() %>% unlist()
+  seurat.obj$variable = rownames(seurat.obj@meta.data)
+  A$group = dplyr::left_join(A, seurat.obj@meta.data) %>% dplyr::select(group.var) %>% as.vector() %>% unlist()
   A = arrange(A, variable)
-  print(A)
 
   #Calculates relative expression
   A.tab = filter(A, value>0) %>%
@@ -116,7 +118,7 @@ plot_relativeExp = function(seurat.obj, features, group.var, levels.group=NULL, 
 CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, annot_tab=NULL,
                      transcripts_in=NULL, filter_trs=F, samtools.bin="samtools"){
   #check args
-  print(genome_sp)
+  message(genome_sp)
   if(is.null(genome_sp) || is.null(genome_gr) || is.null(bamfiles)){
     stop("Error ! Check input args : genome.sp / genome.gr / bamfiles")
   }
@@ -125,13 +127,12 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
   axisTrack <- Gviz::GenomeAxisTrack(genome=genome_sp)
 
   #1. Build genome table & Track
-  print("GenomeTrack building...")
+  message("GenomeTrack building...")
   gtab.gr = genome_gr[genome_gr$gene_name==gene_in]
   gtab.gr$colors = "orange"
   #filter transcripts provided in case
   if(filter_trs){
-    print("filtering...")
-    print(transcripts_in)
+    message(paste0("filtering...", transcripts_in))
     if(is.null(transcripts_in)){stop("Error! Provide list of transcripts: transcripts_in")}
     gtab.gr = gtab.gr[gtab.gr$transcript_name %in% transcripts_in]
   }
@@ -152,11 +153,8 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
   gtab$feature = stringr::str_replace(gtab$feature, "exon", "utr")
   gtab$colors = "orange"
   if(!is.null(transcripts_in)){
-    print("highliting transcripts...")
-    print(transcripts_in)
-    # gtab$colors[which(gtab$transcript_name %in% transcripts_in)] = "blue"
+    message("highliting transcripts...")
     gtab = arrange(gtab, transcript, start, desc(end))
-    # gtab = Reduce(rbind, lapply(split(gtab, gtab$transcript), function(x) x[order(x$start),]))
   }
   #define sets
   chrom = gtab$Chromosome[1]
@@ -165,7 +163,6 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
   strands = as.character(gtab$strand[1])
 
   #track
-  print(gtab)
   dplyr::select(gtab, Chromosome,start,end) %>%
     mutate(start = start - 25, end = end + 25) %>%
   data.table::fwrite(file="./coords.txt", sep="\t", row.names = F, col.names = F)
@@ -186,9 +183,9 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
   }
 
   #2. Build Alignment Track
-  print("DataTack building...")
+  message("Building Alignment Track...")
   Atracks.res = lapply(1:length(bamfiles), function(x){
-    print(names(bamfiles)[x])
+    message(names(bamfiles)[x])
     #get coverage
     system(paste0(samtools.bin, " view -b --region-file coords.txt ", bamfiles[x], " > current.bam"))
     cov.exp = system(paste0(samtools.bin," depth -b coords.txt current.bam > current.cov"))
@@ -202,10 +199,9 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
   YMAX = max(unlist(lapply(Atracks.res, function(x) x[[1]])))
   system("rm current.cov")
   system("rm current.bam")
-  print(Atracks)
 
   #plotting...
-  print("Plotting...")
+  message("Plotting...")
   in.tracks = c(axisTrack, Atrack,Gtrack, Atracks)
 
   #in case of ZOOMING option
@@ -215,11 +211,9 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
   }else{
     if(strands == "+"){
       size.tracks = c(0.1,0.4,0.6,rep(0.5/length(bamfiles), length(bamfiles)))
-      print(size.tracks)
       plotTracks(in.tracks, sizes = size.tracks, ylim = c(0,YMAX), from=ends-distZOOM, just.group="right")}
     if(strands == "-"){
       size.tracks = c(0.1,0.4,0.6,rep(0.5/length(bamfiles), length(bamfiles)))
-      print(size.tracks)
       plotTracks(in.tracks, sizes = size.tracks, ylim = c(0,YMAX), to=starts+distZOOM, just.group="left")}
   }
 }
