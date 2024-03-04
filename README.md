@@ -12,7 +12,7 @@ SCALPEL , a NextFlow based tool for the characterization of Alternative polyaden
 
 <div align="right">
   <a href="">
-    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Scalpel_workflow2.svg" alt="SCALPEL" >
+    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/SPERMATOGENESIS/SCALPEL_pipeline.png" alt="SCALPEL" >
   </a>
 </div>
 
@@ -36,8 +36,6 @@ To get a local copy up and running follow these simple example steps.
 ### Prerequisites
 
 - [Conda](https://www.anaconda.com/) package tool or [Mamba](https://github.com/mamba-org/mamba) (Fast reiplementation of conda)
-- [NextFlow package >= 22.10](https://www.nextflow.io/)
-- [Salmon package >= 1.9.0](https://salmon.readthedocs.io/en/latest/index.html)
 
 ### Installation
 
@@ -48,16 +46,21 @@ To get a local copy up and running follow these simple example steps.
 2. Install the required packages using the requirement.txt file in the SCALPEL folder
 ```sh
 > conda env create -f SCALPEL/requirements.yml
+> conda activate scalpel_env
+```
+3. Within the CONDA environnement, launch R and install the following R packages
+```
+> install.packages(c("stringi", "Seurat"))
 ```
    
-   Another solution (if conda installation takes long) can be to create a Conda environment, install Mamba (faster implementation of Conda) and install the packages using mamba:
+Another solution (if conda installation takes long) can be to create a Conda environment, install Mamba (faster implementation of Conda) and install the packages using mamba:
 ```sh
 > mamba env create --file SCALPEL/requirements.yml
 ```
 
-## Usage
+## SCALPEL usage
 
-### Analysis on Lukassen et al dataset
+### EX: Analysis on Lukassen et al dataset
 
 #### Input files
 
@@ -144,217 +147,9 @@ You can print the Scalpel help documentation by running the following command
 **Be careful to delete the work directory containing nextflow temporary files** when scalpel runs all its processs sucessfully and you don’t plan to relaunch scalpel with modified parameters. (This folder can fill an high memory physical space depending of the size of input files analyzed)
 
 
-### Results - Downstream analysis
+### Downstream analysis
 
-#### Fragments distribution on transcriptomic space
-During the Nextflow execution or at the end, an image file (BINS_PROB.jpeg) showing the distribution of the fragments (reads associated to the same Barcode and UMI tag) in the transcriptomic space is generated in the  **results/reads/probability/**. Depending of the experiment, the  **[–-gene_fraction]** , **[–-dt_threshold]**  or **[–-binsize]** can be 
-modified in order to get a good fit between the fragment counts distribution and the empiric distribution (reads counts by intervals). This file is located in  **results/reads/probability/BINS_PROB.pdf**.
-
-<br />
-<div align="left">
-  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/frag_coverage.png">
-    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/frag_coverage.png" alt="SCALPEL" >
-  </a>
-</div>
-
-#### Single-cell analysis of quantified isoforms
-
-We used [Seurat](https://satijalab.org/seurat/)  for the single cell analysis and APA characterization. We perform a single-cell analysis of the quantified isoform matrix. 
-
-1. Processing of the Scalpel DGE counts
-```r
-library(Seurat)
-library(data.table)
-library(dplyr)
-library(Gviz)
-#source the script scalpelin into the scalpel folder
-source("SCALPEL/src/scalpelib_library.R")
-
-#Paths
-TRANSCRIPT_COUNTS_MATRIX_SCALPEL_FOLDER_PATH  <- "results/reads/apa_dge/APADGE.txt"
-
-#Create a Seurat object of the estimated transcript counts matrix
-TRANSCRIPT_COUNTS_MATRIX <- read.table(file=TRANSCRIPT_COUNTS_MATRIX_SCALPEL_FOLDER_PATH, sep="\t", header=T, row.names=1)
-colnames(TRANSCRIPT_COUNTS_MATRIX) <- stringr::str_replace(colnames(TRANSCRIPT_COUNTS_MATRIX), "\\.","\\")
-sc.obj <- Seurat::CreateSeuratObject(counts=TRANSCRIPT_COUNTS_MATRIX,  project='SRR6129050_TRANSCRIPT_EXP')
-
-sc.obj
-An object of class Seurat 
-35328 features across 1300 samples within 1 assay 
-Active assay: RNA (35328 features, 0 variable features)
-```
-
-2. Quality filtering
-
-Different approaches for the filtering of low quality cells can be realized at this step. We will subset the Seurat object based on a set on curated cell barcodes provided into the scalpel folder, which are annotated with corresponding cell types.
-```r
-#A file of curated barcode cells and cell types associated from Lukassen et al paper can be found in SCALPEL/docs
-CELL_BARCODES_PATH = "SCALPEL/docs/Lukassen_curated_cells.csv"
-
-#Filter with list of cells in annotations
-ctypes_barcodes = fread(CELL_BARCODES_PATH)
-sc.obj = subset(sc.obj, cells = ctypes_barcodes$Barcode)
-
-sc.obj
-An object of class Seurat 
-35328 features across 1237 samples within 1 assay 
-Active assay: RNA (35328 features, 0 variable features)
-```
-
-3. Normalization and data reduction
-
-Once the removing of low quality cells is effective into the Seurat object of Transcript expression from Scalpel, then, we can perform the Normalization, Data reduction and visualization of cells isoform expression.
-```r
-sc.obj = NormalizeData(sc.obj)
-sc.obj = FindVariableFeatures(sc.obj, nfeatures = 2000)
-sc.obj = ScaleData(sc.obj)
-sc.obj = RunPCA(sc.obj)
-pc_choice = 11
-
-#UMAP
-sc.obj = RunUMAP(sc.obj,dims = 1:pc_choice)
-
-#Annotate cells with Lukassen et al cell types annotation
-sc.obj$Barcode = colnames(sc.obj)
-sc.obj$CellType = left_join(sc.obj@meta.data, ctypes_barcodes)$CellType
-DimPlot(sc.obj, group.by = "CellType", label = T, label.size = 5)
-```
-
-<br />
-<div align="center">
-  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/UMAP_celltypes.png">
-    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/UMAP_celltypes.png" alt="SCALPEL" >
-  </a>
-</div>
-
-
-4. Differential isoform characterization
-
-Let’s visualize an example of a gene with its different isoform expression (**Cnbp Gene**)
-
-```r
-#let's look for differential expression across all the conditions or in some specific condition
-# For example, in the CS v RS1 cell types...
-isoforms_markers = Find_isoforms(sc.obj %>% subset(CellType %in% c("CS","RS1")), condition = "CellType")
-View(isoforms_markers)
-
-# let's visualize one gene with differentially expressed isoforms expression
-gene_in = "Cnbp"
-gene_tab = isoforms_markers %>% filter(gene == gene_in)
-gene_tab
-			    CS     ES    RS1    RS2    SC1    SC2 gene p_value p_value.adjusted         gene_tr transcript
-Cnbp***Cnbp-004 263.42 265.52  65.51 174.62  28.84  91.70 Cnbp       0                0 Cnbp***Cnbp-004   Cnbp-004
-Cnbp***Cnbp-005  28.75  22.20 300.16  35.68 341.28 974.28 Cnbp       0                0 Cnbp***Cnbp-005   Cnbp-005
-
-Nebulosa::plot_density(sc.obj, features=gene_tab$gene_tr)
-FeaturePlot(sc.obj, features=gene_tab$gene_tr, order=T, pt.size=0.9, label=T, label.size=5, ncol=3)
-
-```
-
-<br />
-<div align="center">
-  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_expression.png">
-    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_expression.png" alt="Cnbp expression" >
-  </a>
-</div>
-
-<br />
-<div align="center">
-  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_expression2.png">
-    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_expression2.png" alt="Cnpbp expression" >
-  </a>
-</div>
-
-
-We can look for the Isoform coverage expression between the specific clusters. This visualization require to split the filtered BAM file produced after the scalpel execution according to the barcodes attached to selected clusters.
-
-```r
-
-#Let's split the input BAM file use for the analysis 
-samtools_path = "/Users/franz/opt/anaconda3/envs/scalpel_env/bin/samtools"
-BCTAG = "CB:"
-#indicate the filtered BAMFILE preseent in the SCALPEL results folder
-BAMFILE_PATH = "results/reads/filtered_bam/final.bam"
-GTF_PATH = "~/CEPH/users/fake/SHARED_files/gencode.vM10.annotation.gtf"
-
-# let's split the BAM file according to the clusters and filter the associated reads
-lapply(c("CS1", "CS2", "SC1", "SC2", "RS1", "RS2"), function(CONDTYPE){
-  print(CONDTYPE)
-
-  #1)let's get the barcodes associated to each condition and write
-  BC_FILE = paste0(CONDTYPE, ".txt")
-  (sc.obj@meta.data %>% filter(Cluster == CONDTYPE)) %>% select(Barcode) %>% fwrite(BC_FILE)
-
-  #2)subset bam file according to barcode cells
-  FILTER_EXP = paste0(samtools_path, " view -b -D ", BCTAG, BC_FILE, " ", BAMFILE_PATH, " > ", CONDTYPE, 
-  ".bam")
-  system(FILTER_EXP)
-
-  #3)Index bam file
-  INDEX_EXP = paste0(samtools_path, " index ", CONDTYPE, ".bam")
-})
-
-```
-
-Once the sample BAM file splitted in accordance with the different cell types, we can visualize the coverage of the reads associated to the differentially expressed isoform  on the filtered BAM of each cell type.
-
-```r
-# Look coverage on generated BAM files
-genome_tb = rtracklayer::import(GTF_PATH)
-bamfiles = c("CS.bam","ES.bam","RS2.bam","RS1.bam","SC2.bam","SC1.bam")
-bamnames = c("CS","ES","RS2","RS1","SC2","SC1")
-
-#Coverage Vizualisation 1 (all the isoforms of the gene processed by scalpel)
-#NB: scalpel colapse in its execution all the isoforms with similar exons coordinates in the 3'end
-CoveragePlot(genome_gr = genome_tb,
-             gene = gene_in,
-             bamfiles = bamfiles,
-             bamnames = bamnames,
-             seuratobj = sc.obj %>% subset(CellType %in% bamnames),
-             condition = "CellType", genome = "mm10")
-```
-
-<br />
-<div align="center">
-  <a href="">
-    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_all_isoforms.png" alt="Cnbp isoforms expression" >
-  </a>
-</div>
-
-
-We can subset the visualization to the only differential isoform usage detected by Scalpel
-```r
-#Coverage Vizualisation 2 (Subset only the isoforms with differential expression in cell types)
-CoveragePlot(genome_gr = genome_tb,
-             gene = gene_in,
-             bamfiles = bamfiles,
-             bamnames = bamnames,
-             seuratobj = sc.obj %>% subset(CellType %in% bamnames),
-             condition = "CellType", genome = "mm10",
-             transcripts_tofilter = gene_tab$transcript)
-```
-
-<br />
-<div align="center">
-  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnpb_isoforms.png">
-    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnpb_isoforms.png" alt="Cnbp isoform expression" >
-  </a>
-</div>
-
-
-We can visualize the relative expression of the differentially expressed isoform in each cell type by using the function _plot_relativeExp()_
-```r
-#Let's observe Cnbp diff expressed isoforms in the CellTypes
-plot_relativeExp(sc.obj, features = gene_tab$gene_tr, group.var = "CellType")
-```
-
-<br />
-<div align="center">
-  <a href="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_relative_expression.png">
-    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/Cnbp_relative_expression.png" alt="Cnbp isoform expression" >
-  </a>
-</div>
-
+See [SCALPEL Wiki](https://github.com/p-CMRC-LAB/SCALPEL/wiki)
 
 
 ## Contact
