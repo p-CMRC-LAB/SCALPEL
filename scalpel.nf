@@ -21,6 +21,7 @@ params.gene_fraction = "98%"
 params.binsize = 20
 params.cpus = 10
 params.threads = 10
+params.cellranger_repo = true
 
 
 
@@ -48,8 +49,8 @@ log.info """\
         - sequencing type (required): ${params.sequencing}
 
         Optional:
-        - barcodes [--barcodes] (optional)
-        - clusters of cells [--clusters]
+        - barcodes [--barcodes] (optional): ${params.barcodes}
+        - clusters of cells [--clusters] (optional): ${params.clusters}
         - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp): ${params.dt_threshold}
         - transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional, default 30bp): ${params.dt_exon_end_threshold}
         - minimal distance of Ip from isoform 3'ends (optional, 60): ${params.isoform_end_ip_threshold}
@@ -127,7 +128,7 @@ workflow chromium_repo_processing {
         read_10Xrepo.out.map{ it = [it[0], [it[1], it[2], it[3], it[4]]] }.set{ sample_ids_ch }
 
     emit:
-        sample_links_ch = sample_ids_ch
+        sample_links_extracted = sample_ids_ch
 }
 
 /* Processing of reads */
@@ -257,51 +258,36 @@ workflow {
     /* annotation preprocessing (1) */
     annotation_preprocessing(params.transcriptome, params.gtf, read_pairs_ch)
 
-    /* reads_processing (2) */
+    /* reads_processing - reading (1) */
     /* Chromium */
-    if ( params.sequencing == "chromium" ) {
+    if ( params.sequencing == "chromium" && params.cellranger_repo == true ) {
 
         /* Parsing of 10X repository */
         chromium_repo_processing("${params.samples}")
-        chromium_repo_processing.out.count().view()
-        reads_processing(annotation_preprocessing.out.selected_isoforms, chromium_repo_processing.out.sample_links_ch)
+        chromium_repo_processing.out.sample_links_extracted.set{ sample_links_ch }
 
-        /* internalp filtering processing (3) */
-        internalpriming_filtering(reads_processing.out.mappeds_reads)
-
-        /* isoform quantification (4) */
-        isoform_quantification(internalpriming_filtering.out, chromium_repo_processing.out.sample_links_ch.map{ sample_id, paths -> tuple( sample_id, paths[3])})
-
-        /* results (5) */
-        results(reads_processing.out.splitted_bams, internalpriming_filtering.out.filtered_reads)
-
-        /* analysis (6) */
-        if ( params.clusters != null )
-            downstream_analysis(isoform_quantification.out)
-
-    }
-
-    /* Dropseq */
-    if ( params.sequencing == "dropseq" ) {
+    } else {
 
         /* It is important that the samples extension get settled as *.bam / *.bai / *.barcodes / *.counts */
-        sample_links_ch = Channel.fromFilePairs( "${params.samples}/*{.bam,.bam.bai,.barcodes.txt,.counts.txt}", size: 4, checkIfExists: true )    
-        reads_processing(annotation_preprocessing.out.selected_isoforms, sample_links_ch)
-
-        /* internalp filtering processing (3) */
-        internalpriming_filtering(reads_processing.out.mappeds_reads)
-
-        /* isoform quantification (4) */
-        isoform_quantification(internalpriming_filtering.out, sample_links_ch.map{ sample_id, paths -> tuple( sample_id, paths[3])})
-
-        /* results (5) */
-        results(reads_processing.out.splitted_bams, internalpriming_filtering.out.filtered_reads)
-
-        /* analysis (6) */
-        if ( params.clusters != null )
-            downstream_analysis(isoform_quantification.out)
+        Channel.fromFilePairs( "${params.samples}/*{.bam,.bam.bai,.barcodes.txt,.counts.txt}", size: 4, checkIfExists: true ).set{ sample_links_ch }
 
     }
+    
+    /* reads_processing - extracting (2) */   
+    reads_processing(annotation_preprocessing.out.selected_isoforms, sample_links_ch)
+
+    /* internalp filtering processing (3) */
+    internalpriming_filtering(reads_processing.out.mappeds_reads)
+
+    /* isoform quantification (4) */
+    isoform_quantification(internalpriming_filtering.out, sample_links_ch.map{ sample_id, paths -> tuple( sample_id, paths[3])})
+
+    /* results (5) */
+    results(reads_processing.out.splitted_bams, internalpriming_filtering.out.filtered_reads)
+
+    /* analysis (6) */
+    if ( params.clusters != null )
+        downstream_analysis(isoform_quantification.out)
 
 }
 
