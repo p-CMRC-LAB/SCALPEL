@@ -1,13 +1,9 @@
 
-
-
-
-#Libraries
-library(dplyr)
-library(data.table)
-library(ggplot2)
-library(argparse)
-library(scales)
+suppressMessages(suppressWarnings(library(scales)))
+suppressMessages(suppressWarnings(library(argparse)))
+suppressMessages(suppressWarnings(library(data.table)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(ggplot2)))
 
 
 
@@ -21,65 +17,82 @@ parser$add_argument('OUTPUT_PROB', metavar='Tfop', type="character", help='path 
 parser$add_argument('OUTPUT_PDF', metavar='PDFfop', type="character", help='path of output pdf pictures')
 args = parser$parse_args()
 
+
 #Variables
 QUANTILE_THRESHOLD = args$GFRAC
 BINS = as.numeric(args$BINS)
 
 
-#Files Opening (1)
-#*************
+#1. Files Opening
+#++++++++++++++++
 #get list of of unique read file
 reads = fread(args$PATH_OF_UNIQUE_TR,
- col.names = c("seqnames","start.rd","end.rd","start","end","width.rd","tr_length","start_rel","end_rel","rel_start_rd","rel_end_rd","dist_END","strand","read.id","frag.id","splice","nb.splices","gene_id","gene_name","transcript_id","transcript_name","exon_id","exon_number","collapsed_trs","bulk_weights"))
+              col.names = c("seqnames.rd","start.rd","end.rd","start","end","tr_length","start_rel","end_rel",
+                            "rel_start_rd","rel_end_rd","dist_END","strand","read.id.encoded","frag.id.encoded",
+                            "splice","nb.splices","gene_name","transcript_name","exon_id","exon_number",
+                            "collapsed_trs","bulk_weights","rel_start_fg","rel_end_fg"), nThread = 1)
 
-Atab = reads %>% distinct(seqnames,start.rd,end.rd,frag.id,gene_name) %>% group_by(gene_name) %>% summarise(totgene = n()) %>% data.table() %>% arrange(totgene)
-Atab.quant = quantile(Atab$totgene, seq(0,1,0.01))
-gene_tokeep = (Atab %>% filter(totgene < Atab.quant[[QUANTILE_THRESHOLD]]))$gene_name
-reads = reads %>% filter(gene_name %in% gene_tokeep)
+#2. Processing
+#+++++++++++++
 
+#- get gene counts
+gene_counts = reads %>%
+  distinct(seqnames.rd,start.rd,end.rd,read.id.encoded,frag.id.encoded,gene_name,transcript_name) %>%
+  group_by(gene_name) %>%
+  summarise(nb.reads = n()) %>%
+  data.table()
+gene.quantiles = quantile(gene_counts$nb.reads, seq(0,1,0.01))
+gene.tokeep = dplyr::filter(gene_counts, nb.reads < gene.quantiles[[QUANTILE_THRESHOLD]])$gene_name
+#filtering
+reads = reads %>%
+  filter(gene_name %in% gene.tokeep)
 
-#get distinct frag_id / 3end
-# dtab = reads %>% group_by(read.id) %>% summarise(dist_END = min(dist_END)) %>% arrange(dist_END) %>% data.table()
-dtab = reads %>% distinct(read.id, dist_END) %>% arrange(dist_END) %>% data.table()
-dtab = table(dtab$dist_END) %>% data.table()
-dtab$V1 = as.numeric(dtab$V1)
-colnames(dtab) = c('transcriptomic_distance','counts')
+#- get the number of reads at each 3'end position
+read_tab = distinct(reads, read.id.encoded, dist_END, start.rd, end.rd) %>%
+  group_by(dist_END) %>%
+  summarise(read.counts = n()) %>%
+  data.table()
+colnames(read_tab) = c("transcriptomic_distance", "counts")
 
 #let's plot the fragments ends positions and reads
-ggplot(dtab, aes(transcriptomic_distance, counts)) +
-    geom_line() + geom_area(fill="cornflowerblue") + geom_smooth(span=0.05, color="red")
+ggplot(read_tab, aes(transcriptomic_distance, counts)) +
+  geom_line() + geom_area(fill="cornflowerblue") + geom_smooth(span=0.05, color="red")
 
 #let's set interval axis
-part_neg = c(seq(0,dtab$transcriptomic_distance[1],-BINS),dtab$transcriptomic_distance[1]) %>% unique() %>% rev()
-part_pos = c(seq(0, max(dtab$transcriptomic_distance), BINS), max(dtab$transcriptomic_distance)) %>% unique()
+part_neg = c(seq(0,read_tab$transcriptomic_distance[1],-BINS),read_tab$transcriptomic_distance[1]) %>% unique() %>% rev()
+part_pos = c(seq(0, max(read_tab$transcriptomic_distance), BINS), max(read_tab$transcriptomic_distance)) %>% unique()
 intervals = unique(c(part_neg,part_pos))
 intervals_counts = list()
 intervals_idx = list()
 intervals_probs = list()
 for(i in 1:(length(intervals)-1)){
-    left_born = intervals[i]
-    right_born = intervals[i+1]
-    #index
-    intervals_idx[[i]] = seq(left_born, right_born)
-    #counts
-    intervals_counts[[i]] = rep((dtab %>% filter(transcriptomic_distance>= left_born & transcriptomic_distance < right_born))$counts %>% sum(), length(intervals_idx[[i]]))
+  left_born = intervals[i]
+  right_born = intervals[i+1]
+  #index
+  intervals_idx[[i]] = seq(left_born, right_born)
+  #counts
+  intervals_counts[[i]] = rep(
+    (read_tab %>% filter(transcriptomic_distance>= left_born & transcriptomic_distance < right_born))$counts %>%
+      sum(), length(intervals_idx[[i]]))
 }
-interval.tab = data.table(transcriptomic_distance = unlist(intervals_idx), counts_cum = unlist(intervals_counts)) %>% distinct(transcriptomic_distance,.keep_all = T)
+interval.tab = data.table(transcriptomic_distance = unlist(intervals_idx), counts_cum = unlist(intervals_counts)) %>%
+  distinct(transcriptomic_distance,.keep_all = T)
 interval.tab$probs_bin = (interval.tab$counts_cum / sum(interval.tab$counts_cum)) * 100
-interval.tab = left_join(interval.tab, dtab)
+interval.tab = left_join(interval.tab, read_tab)
 interval.tab$counts = interval.tab$counts %>% tidyr::replace_na(0)
 #let's normalize for visualization
 interval.tab$probability_scaled = interval.tab$probs_bin %>% scales::rescale(to = c(0,max(interval.tab$counts)))
-#interval.tab$loess = loess(counts~transcriptomic_distance, data = interval.tab, span = 0.1, weights = interval.tab$probs_bin)$fitted %>% scales::rescale(to=c(0,max(interval.tab$counts)))
 
+#plotting
 ggplot(interval.tab) +
-    geom_area(aes(transcriptomic_distance,counts), fill="cornflowerblue", size=0.5) +
-    geom_line(aes(transcriptomic_distance,probability_scaled), color="red",size=1) +
-    theme_classic() +
-    ggtitle("Fragments distribution on transcriptomic space")
-ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, height = 8.27)
+  geom_area(aes(transcriptomic_distance,counts), fill="cornflowerblue", size=0.5) +
+  geom_line(aes(transcriptomic_distance,probability_scaled), color="red",size=1) +
+  theme_classic() +
+  ggtitle("Fragments distribution on transcriptomic space")
 
 # [Writing]
-# --------
+#++++++++++
 ggsave(args$OUTPUT_PDF, scale = 1, device = "pdf",units = "in", width = 11.69, height = 8.27)
-fwrite(interval.tab[,c('transcriptomic_distance','counts','probs_bin')], file = args$OUTPUT_PROB, sep="\t", col.names = F, nThread=1)
+fwrite(interval.tab[,c('transcriptomic_distance','counts','probs_bin')],
+       file = args$OUTPUT_PROB, sep="\t", col.names = F, nThread=1)
+
