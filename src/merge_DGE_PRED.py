@@ -17,7 +17,7 @@ args = parser.parse_args()
 
 #Open files
 print('Files opening...')
-predictions = pd.read_csv(args.PRED_path, names = ["bc","gene_name","gene_id","transcript_name","transcript_id","tr_prob"], sep="\t", skiprows = 1)
+predictions = pd.read_csv(args.PRED_path, names = ["bc","gene_name","transcript_name","tr_prob"], sep="\t", skiprows = 1)
 
 print('dge...')
 dge = pd.read_csv(args.DGE_path, sep="\t")

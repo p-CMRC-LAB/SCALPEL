@@ -21,9 +21,10 @@ params.gene_fraction = "98%"
 params.binsize = 20
 params.cpus = 10
 params.threads = 10
-params.cellranger_repo = true
+params.no_cr_repo = null
 
 
+println(" task.cpus ")
 
 log.info """\
     ===============================
@@ -67,14 +68,18 @@ log.info """\
 /* Chech required args */
 /* ******************* */
 if ( params.transcriptome == null | params.gtf == null | params.ipdb == null)
-	error "Enter annotation reference files ! [--transcriptome / --gtf / --ipdb]"
+    error "Enter annotation reference files ! [--transcriptome / --gtf / --ipdb]"
 
 if ( params.sequencing == null )
-	error "Enter sequencing argument (chromium or dropseq) !  [--sequencing]"
+    error "Enter sequencing argument (chromium or dropseq) !  [--sequencing]"
 
 if ( params.samples == null | params.reads == null)
-	error "Enter sample files ! [--samples / --reads]"
+    error "Enter sample files ! [--samples / --reads]"
 
+if ( params.no_cr_repo == null & params.sequencing == "chromium" )
+    log.info """Option: [--no_cr_repo] (default) unactivated ... Parsing for 10X CellRanger repositories into [--samples] PATH \n""".stripIndent()
+else
+    log.info """Option: [--no_cr_repo] activated ... Parsing for (*.bam / *.bam.bai / *.barcodes.txt / *.counts.txt) into [--samples] PATH \n""".stripIndent()
 
 
 /* Include subworkflow modules */
@@ -259,21 +264,28 @@ workflow {
     annotation_preprocessing(params.transcriptome, params.gtf, read_pairs_ch)
 
     /* reads_processing - reading (1) */
+
     /* Chromium */
-    if ( params.sequencing == "chromium" && params.cellranger_repo == true ) {
+    if ( params.sequencing == "chromium" ) {
 
-        /* Parsing of 10X repository */
-        chromium_repo_processing("${params.samples}")
-        chromium_repo_processing.out.sample_links_extracted.set{ sample_links_ch }
+        if ( params.no_cr_repo == null ) {
 
-    } else {
+            /* Parsing of 10X repository */
+            chromium_repo_processing("${params.samples}")
+            chromium_repo_processing.out.sample_links_extracted.set{ sample_links_ch }
+        } else {
 
-        /* It is important that the samples extension get settled as *.bam / *.bai / *.barcodes / *.counts */
+            /* It is important that the samples extension get settled as *.bam / *.bai / *.barcodes.txt / *.counts.txt */
+            Channel.fromFilePairs( "${params.samples}/*{.bam,.bam.bai,.barcodes.txt,.counts.txt}", size: 4, checkIfExists: true ).set{ sample_links_ch }
+        }
+    /* Dropseq */
+    } else if ( params.sequencing == "dropseq" ) {
+
+        /* It is important that the samples extension get settled as *.bam / *.bai / *.barcodes.txt / *.counts.txt */
         Channel.fromFilePairs( "${params.samples}/*{.bam,.bam.bai,.barcodes.txt,.counts.txt}", size: 4, checkIfExists: true ).set{ sample_links_ch }
-
     }
-    
-    /* reads_processing - extracting (2) */   
+
+    /* reads_processing - extracting (2) */
     reads_processing(annotation_preprocessing.out.selected_isoforms, sample_links_ch)
 
     /* internalp filtering processing (3) */

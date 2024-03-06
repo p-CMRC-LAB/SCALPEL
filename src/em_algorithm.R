@@ -48,7 +48,7 @@ em_algorithm = function(tab){
 }
 
 #file opening
-cell = fread(args$cell, col.names = c("bc","gene_name","gene_id","transcript_name","transcript_id","umi","frag_prob_weighted"), nThread =1) %>% distinct()
+cell = fread(args$cell, col.names = c("bc","gene_name","transcript_name","umi","frag_prob_weighted"), nThread =1) %>% distinct()
 
 #Perform EM algorithm
 print("EM algorithm...")
@@ -57,7 +57,7 @@ res = Reduce(rbind, lapply(genetabs, function(x) em_algorithm(x)))
 
 #join with cell information
 cell = left_join(cell,res)
-cell = cell %>% dplyr::select(bc,gene_name,gene_id,transcript_name,transcript_id,rel_abund)
+cell = cell %>% dplyr::select(bc,gene_name,transcript_name,rel_abund)
 
 #writing
 fwrite(cell,file = args$output_path, sep="\t", col.names = F, row.names = F, nThread=1)

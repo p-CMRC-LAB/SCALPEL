@@ -30,14 +30,14 @@ process ip_filtering {
     cache true
 
     input:
-        tuple val(sample_id), val(chr), path(reads), path(ipdb)
+        tuple val(sample_id), val(chr), path(reads), path(encode), path(ipdb)
 
     output:
-	    tuple val(sample_id), val(chr), path("${chr}_mapped.ipdb"), path("${chr}_unique.reads"), path("${chr}.readid"), path("${chr}_ipf.reads")
+	    tuple val(sample_id), val(chr), path("${chr}_mapped.ipdb"), path("${chr}_unique.reads"), path("${chr}.readid"), path("${chr}_ipf.reads"), path(encode)
 	
     script:
         """
         #filtering
-        Rscript ${baseDir}/src/ip_filtering.R ${reads} ${ipdb} ${params.isoform_end_ip_threshold} ${chr}.readid ${chr}_unique.reads ${chr}_mapped.ipdb ${chr}_ipf.reads
+        Rscript ${baseDir}/src/ip_filtering.R ${reads} ${ipdb} ${params.isoform_end_ip_threshold} ${encode} ${chr}.readid ${chr}_unique.reads ${chr}_mapped.ipdb ${chr}_ipf.reads
         """
 }

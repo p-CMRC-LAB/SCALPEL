@@ -31,7 +31,7 @@ process fragment_probabilities{
 	cache true
 
 	input:
-		tuple val(sample_id), val(chr), path(reads), path(probabilities)
+		tuple val(sample_id), val(chr), path(reads), path(encode), path(probabilities)
 
 	output:
     	tuple val(sample_id), path("${chr}_frag.reads")
@@ -39,7 +39,7 @@ process fragment_probabilities{
 	script:
         """
         #Write cell Files
-		Rscript ${baseDir}/src/fragment_probabilities.R ${reads} ${probabilities} ${chr}_frag.reads
+		Rscript ${baseDir}/src/fragment_probabilities.R ${reads} ${probabilities} ${encode} ${chr}_frag.reads
         """
 }
 

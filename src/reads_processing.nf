@@ -130,7 +130,7 @@ process reads_mapping_filtering {
         tuple val(sample_id), val(chr), path(bed), path(exons), path(exons_unique)
 	
     output:
-        tuple val(sample_id), val(chr), path("${chr}.reads")
+        tuple val(sample_id), val(chr), path("${chr}.reads"), path("encoding.txt")
 
 	script:
         """
