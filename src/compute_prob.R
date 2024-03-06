@@ -45,12 +45,14 @@ gene.quantiles = quantile(gene_counts$nb.reads, seq(0,1,0.01))
 gene.tokeep = dplyr::filter(gene_counts, nb.reads < gene.quantiles[[QUANTILE_THRESHOLD]])$gene_name
 #filtering
 reads = reads %>%
-  filter(gene_name %in% gene.tokeep)
+  filter(gene_name %in% gene.tokeep) %>%
+  mutate(dist_END = as.numeric(dist_END))
 
 #- get the number of reads at each 3'end position
 read_tab = distinct(reads, read.id.encoded, dist_END, start.rd, end.rd) %>%
   group_by(dist_END) %>%
   summarise(read.counts = n()) %>%
+  arrange(dist_END) %>%
   data.table()
 colnames(read_tab) = c("transcriptomic_distance", "counts")
 

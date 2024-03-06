@@ -194,7 +194,7 @@ workflow isoform_quantification {
         probs = probability_distribution.out.map{ sample_id, prob_count, prob_figure -> tuple ( sample_id, prob_count) }
 
         /* calculate all probabililities */
-        filtered_reads.flatMap{ it = [it[0,1,5]]}.join(filtered_reads.flatMap{ it = it[1]}.unique().combine(probs).flatMap{ it = [it[1,0,2]]}, by:[0,1]).set{ all_reads }
+        filtered_reads.flatMap{ it = [it[0,1,5,6]]}.join(filtered_reads.flatMap{ it = it[1]}.unique().combine(probs).flatMap{ it = [it[1,0,2]]}, by:[0,1]).set{ all_reads }
         fragment_probabilities(all_reads)
         cells_splitting(fragment_probabilities.out.groupTuple(by: 0))
         // cells_splitting.out.transpose().view()
