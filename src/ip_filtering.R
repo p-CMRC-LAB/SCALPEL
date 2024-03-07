@@ -83,7 +83,7 @@ if(length(ipdb)!=0){
   #- Discard on each transcript, all the fragments with distEND < dist_END_ip
   frag_todel = left_join(reads,ipdb[,c("rel_start_ip","rel_end_ip","transcript_name","gene_name","dist_END_ip")],
                       multiple = "all") %>% na.omit() %>%
-    dplyr::filter(rel_start_fg > dist_END_ip) %>%
+    dplyr::filter(dist_END_fg > dist_END_ip) %>%
     distinct(ft.encoded)
   reads = dplyr::filter(reads, !(ft.encoded %in% frag_todel$ft.encoded))
   
@@ -92,7 +92,7 @@ if(length(ipdb)!=0){
   message("no internal priming position associated to the chromosome detected...")
   
 }
-reads = reads[,-c("ft.encoded")]
+reads = reads[,-c("ft.encoded","dist_END_fg")]
 
 #2. Get read_IDS encoded to filter
 #+++++++++++++++++++++++++++++++++

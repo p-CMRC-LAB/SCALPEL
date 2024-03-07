@@ -51,7 +51,7 @@ qf = qf %>% group_by(transcript_id) %>%
 #     data.table()
 
 
-qf = dplyr::distinct(A, gene_name, transcript_id, transcript_name, Length, NumReads)
+qf = dplyr::distinct(qf, gene_name, transcript_id, transcript_name, Length, NumReads)
 
 #writing
 fwrite(qf, sep="\t", row.names=F, file =args$output_path, nThread=1)

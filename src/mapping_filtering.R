@@ -175,7 +175,8 @@ pos_targets = distinct(tab_pos, transcript_name, frag.id.encoded, read.id.encode
   distinct(exon_id, frag.id.encoded, read.id.encoded, rel_start_fg, rel_end_fg)
 #merging
 tab_pos = left_join(tab_pos, pos_targets)
-tab_pos$dist_END = tab_pos$rel_end_fg
+tab_pos$dist_END = tab_pos$rel_end_rd
+tab_pos$dist_END_fg = tab_pos$rel_end_fg
 
 #NEGATIVE strand
 tab_neg = reads %>% filter(strand == "-")
@@ -187,7 +188,8 @@ neg_targets = distinct(tab_neg, transcript_name, frag.id.encoded, read.id.encode
   distinct(transcript_name, exon_id, frag.id.encoded, read.id.encoded, rel_start_fg, rel_end_fg)
 #merging
 tab_neg = left_join(tab_neg, neg_targets)
-tab_neg$dist_END = tab_neg$rel_start_fg
+tab_neg$dist_END = tab_neg$rel_start_rd
+tab_neg$dist_END_fg = tab_neg$rel_start_fg
 
 #biding tables
 reads = data.table(rbind(tab_pos, tab_neg))
@@ -199,7 +201,7 @@ reads = reads %>% filter(!ft.encoded %in% targets)
 #column_selection
 reads = reads %>%
   dplyr::select(seqnames.rd,start.rd,end.rd,start,end,tr_length,start_rel,end_rel,rel_start_rd,rel_end_rd,
-                dist_END,strand,read.id.encoded,frag.id.encoded,splice,nb.splices,gene_name,transcript_name,
+                dist_END,dist_END_fg,strand,read.id.encoded,frag.id.encoded,splice,nb.splices,gene_name,transcript_name,
                 exon_id,exon_number,collapsed_trs,bulk_weights,rel_start_fg,rel_end_fg,ft.encoded)
 
 #free memory space
