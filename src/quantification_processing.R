@@ -42,13 +42,13 @@ if(stringr::str_detect(qf$Name[1], pattern = "|")){
 qf = distinct(qf)
 qf = left_join(qf, distinct(genome, transcript_id, transcript_name, gene_name))
 qf = qf %>% group_by(transcript_id) %>%
-    mutate(NumReads = round(mean(TPM),2)) %>%
-    filter(NumReads != 0) %>%
+    mutate(NumReads = round(mean(TPM),10)) %>%
+    # filter(NumReads != 0) %>%
     data.table()
 
-A = qf %>% group_by(gene_name,Sample) %>%
-    mutate(frac_TPM_Sample = TPM / sum(TPM)) %>%
-    data.table()
+# A = qf %>% group_by(gene_name,Sample) %>%
+#     mutate(frac_TPM_Sample = TPM / sum(TPM)) %>%
+#     data.table()
 
 
 qf = dplyr::distinct(A, gene_name, transcript_id, transcript_name, Length, NumReads)

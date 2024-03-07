@@ -149,8 +149,8 @@ if("gene_version" %in% colnames(gtf)){
 #discard all the transcript with a null quantification at Bulk level
 print(gtf)
 gtf = left_join(gtf, dplyr::select(qf, transcript_id, NumReads)) %>% 
-    filter(!is.na(NumReads)) %>%
-    filter(NumReads != 0)
+    filter(!is.na(NumReads))
+    # filter(NumReads != 0)
 
 # c. exon selection & relative coordinates calculation
 print("relative exon coordinates calculation...")
@@ -203,7 +203,7 @@ gtf = gtf %>%
 gtf = gtf %>% group_by(gene_name) %>%
  mutate(salmon_rlp = NumReads / sum(unique(NumReads))) %>%
  mutate(salmon_rlp = round(salmon_rlp,2)) %>%
- dplyr::filter(salmon_rlp != 0) %>% 
+ # dplyr::filter(salmon_rlp != 0) %>% 
  data.table()
 gtf = subset(gtf, select = -c(NumReads))
 
