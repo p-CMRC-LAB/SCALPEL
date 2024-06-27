@@ -1,4 +1,4 @@
-SCALPEL , a NextFlow based tool for the characterization of Alternative polyadenylation  at single-cell resolution
+SCALPEL , a NextFlow based tool for the quantification of transcript isoforms at single-cell resolution
 ======================================================================================
 
 
