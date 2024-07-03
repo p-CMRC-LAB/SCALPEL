@@ -164,6 +164,6 @@ Project Link: [SCALPEL Github](https://github.com/p-CMRC-LAB/SCALPEL)
 ## Paper
 [Access SCALPEL_PAPER](https://www.biorxiv.org/content/10.1101/2024.06.21.600022v1)
 
-Quantification of transcript isoforms at the single-cell level using SCALPEL
-Franz Ake, Sandra M. Fernández-Moya, Marcel Schilling, Akshay Jaya Ganesh, Ana Gutiérrez-Franco, Lei Li, Mireya Plass
+Quantification of transcript isoforms at the single-cell level using SCALPEL \
+Franz Ake, Sandra M. Fernández-Moya, Marcel Schilling, Akshay Jaya Ganesh, Ana Gutiérrez-Franco, Lei Li, Mireya Plass \
 bioRxiv 2024.06.21.600022; doi: https://doi.org/10.1101/2024.06.21.600022
