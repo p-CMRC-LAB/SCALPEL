@@ -1,12 +1,7 @@
 
-
-
-
 library(data.table)
 library(dplyr)
-library(doParallel)
 library(argparse)
-
 
 
 #Argunent Parser
@@ -17,7 +12,7 @@ args = parser$parse_args()
 
 
 #get files
-all_files = list.files(args$frags_path, pattern = "*.frag_prob", full.names = T)
+all_files = list.files(args$frags_path, pattern = "*_frag.reads", full.names = T)
 
 #run awk on each of those files
 command.awk = lapply(all_files, function(x) paste0("awk '{print >> $1\".cell\"}' ", x)) %>% unlist()
