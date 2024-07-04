@@ -1,17 +1,17 @@
 #!/usr/bin/env nextflow
 
-/* 
+/*
 Loading of SAMPLES data & preprocessing according to the sequencing type
 =====================================================================
 */
 
 /* loading of subworkflows */
-include { get_10X_sampleIDs; read_10Xrepo } from '../subworkflows/loading_10X_files.nf'
+include { read_10Xrepo } from '../subworkflows/loading_10X_files.nf'
 include { bam_splitting } from '../subworkflows/bam_splitting.nf'
 
 
-/* 
-- In Case of processing of 10X based samples with a CellRanger repository -> Proceeding to an extraction of the required sample files 
+/*
+- In Case of processing of 10X based samples with a CellRanger repository -> Proceeding to an extraction of the required sample files
 =====================================================================================================================================
 */
 
@@ -24,21 +24,22 @@ workflow samples_loading {
     main:
 
         /* - In case of 10X file type, extract required files... */
-        if ( "${params.sequencing}" == "10x" ){
-            /*get CR path*/
-            get_10X_sampleIDs(samples_paths.flatMap{ it=it[3] })
+        if ( "${params.sequencing}" == "chromium" ) {
 
             /* extract sampleIDs and associated paths */
-            get_10X_sampleIDs.out.flatten().combine(samples_paths.flatMap{ it=it[3] }).set{ sample_ids }
-            read_10Xrepo(sample_ids)
+            read_10Xrepo(samples_paths.map{ it=tuple(it[0], it[3]) })
 
             /* formatting */
-            read_10Xrepo.out.map{ it = [it[0], [it[1], it[2], it[3], it[4]]] }.set{ sample_ids_ch }
-        } else {
-            samples_paths.map{ it = tuple( it[0], file(it[3]), file(it[4]), file(it[5]), file(it[6]) ) }.set{ sample_ids_ch }
-	}
+            read_10Xrepo.out.map{ it = tuple( it[0], file(it[1]), file(it[2]), file(it[3]), file(it[4]) ) }.set{ sample_ids_ch }
 
-        /* - processing of input BAM file... */
+        } else if ( "${params.sequencing}" == "dropseq") {
+
+            samples_paths.map{ it = tuple( it[0], file(it[3]), file(it[4]), file(it[5]), file(it[6]) ) }.set{ sample_ids_ch }
+
+        } else
+            error( "Incoherency in [--sequencing] args !!" )
+
+        /* processing of input BAM file... */
         bam_splitting( selected_isoforms.flatMap { it = it[0] }.combine(sample_ids_ch) )
 
     emit:

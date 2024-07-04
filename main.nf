@@ -12,7 +12,7 @@ Barcelona, SPAIN
 params.barcodes = null
 params.clusters = null
 
-/* - Import Functions / Modules / Workflows / Subworkflows 
+/* - Import Functions / Modules / Workflows / Subworkflows
 =================================================================================================
 */
 include { salmon_transcriptome_indexing; salmon_bulk_quantification; tpm_counts_average; isoform_selection_weighting } from './workflows/annotation_preprocessing.nf'
@@ -21,7 +21,7 @@ include { probability_distribution; fragment_probabilities; cells_splitting; em_
 include { differential_isoform_usage } from './workflows/apa_characterization.nf'
 
 
-/* - Define SCALPEL default params variables 
+/* - Define SCALPEL default params variables
 =============================================================================
 */
 params.dt_threshold = 600
@@ -81,8 +81,6 @@ log.info """\
         - transcriptomic end distance threhsold [--de_threshold] (optional, default 30bp): ${params.de_threshold}
         - minimal distance of internal priming sites (IP) from isoform 3'ends [--ip_threshold] (optional, 60nuc): ${params.ip_threshold}
 
-    - Results:
-        - ${params.output}
 """.stripIndent()
 
 
@@ -96,17 +94,17 @@ workflow annotation_preprocessing {
         genome_gtf
         genome_fasta
         samples_paths
-    
+
     main:
         /* Salmon transcriptome indexing */
         salmon_transcriptome_indexing(file(genome_fasta))
 
         /* Salmon Bulk Quantification */
         salmon_bulk_quantification(salmon_transcriptome_indexing.out, file(genome_gtf), samples_paths.map{ it= tuple(it[0], file(it[1]), file(it[2])) })
-        
+
         /* Averaging of isoforms pseudobulk counts between samples */
         tpm_counts_average(salmon_bulk_quantification.out.collect(), file(genome_gtf))
-        
+
         /* extract bulk quantification and chromosome gtfs */
         tpm_counts_average.out.flatMap { it = it[0] }.set { bulk_quants }
         tpm_counts_average.out.flatMap { it = it[1] }.set { gtfs }
@@ -126,7 +124,7 @@ workflow reads_processing {
         samples_paths
 	selected_isoforms
         ip_annots
-    
+
     main:
         /* - Loading of Samples */
         samples_loading(samples_paths, selected_isoforms)
@@ -221,10 +219,8 @@ workflow {
     ============================= */
     isoform_quantification(reads_processing.out.filtered_reads, samples_paths)
 
-
     /* APA characterization (D)
     =========================== */
     apa_characterization( isoform_quantification.out.flatMap{ it=it[2] } )
+
 }
-
-

@@ -13,9 +13,9 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
   # ---------------------------------------------------------------------------
   #Function to Find differentially expressed isoforms in the conditions defined
   # ---------------------------------------------------------------------------
-  
+
   message("processing...")
-  
+
   #1/ Find genes with at least 2 transcripts
   message("Find genes with at least 2 transcripts...")
   my.genes = data.frame(gene_tr = rownames(seurat.obj)) %>%
@@ -23,7 +23,7 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
     group_by(gene) %>%
     reframe(nb.trs = n_distinct(trs), gene_tr) %>%
     dplyr::filter(nb.trs>1)
-  
+
   #2/ Get Isoform expression in defined conditions
   message("Get isoforms expression in the condition defined...")
   ALL_expression = AggregateExpression(object = subset(seurat.obj, features = my.genes$gene_tr),
@@ -33,7 +33,7 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
     tidyr::separate(col="gene_tr", into=c("gene_name","transcript_name"), remove = F, sep="\\*\\*\\*") %>%
     data.table()
   colnames(ALL_expression) = str_replace(colnames(ALL_expression),"X","")
-  
+
   #filter trs based on abundance threshold & X2 testing...
   message("filter trs based on abundance threshold and X2 testing...")
   conds = unlist(unique(seurat.obj[[condition]]))
@@ -53,19 +53,19 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
       return(NULL)
     }
   })
-  
+
   #3/deleting NULL occurences
   tmp_all = tmp_all[!sapply(tmp_all,is.null)]
-  
+
   tmp = tmp_all %>% rbindlist()
- 
+
   #4/ adjust_pvalue
   message("P.value adjusting......")
   tmp = dplyr::mutate(tmp, p_value.adjusted = p.adjust(p_value, method="BH")) %>%
     dplyr::filter(p_value.adjusted <= pval_adjusted) %>%
     arrange(p_value.adjusted, gene_tr) %>%
     data.table()
-  
+
   #5/return
   return(tmp)
 }
@@ -75,14 +75,14 @@ Find_isoforms = function(seurat.obj, pval_adjusted=0.05, condition="orig.ident",
 
 plot_relativeExp = function(seurat.obj, features_in, group.var, levels.group=NULL, assay="RNA", ...){
   #Function to plot with geom_boxplot relative isoform expression
-  
+
   #extract transcripts
   A = seurat.obj[[assay]]$counts[features_in,] %>%
     data.frame() %>%
     mutate(gene_transcript=features_in) %>%
     melt() %>%
     suppressWarnings()
-  
+
   seurat.obj$variable = rownames(seurat.obj@meta.data)
   A$group = dplyr::left_join(A, seurat.obj@meta.data) %>% dplyr::select(group.var) %>% as.vector() %>% unlist()
   A = arrange(A, variable)
@@ -93,7 +93,7 @@ plot_relativeExp = function(seurat.obj, features_in, group.var, levels.group=NUL
     mutate(perc = value / sum(value) * 100) %>%
     arrange(gene_transcript,group) %>%
     data.table()
-  
+
   #Visualization
   ggplot(A.tab, aes(group, perc, fill=gene_transcript)) +
     geom_boxplot2(width = 0.5, width.errorbar = 0.1, color="gray20") +
@@ -135,7 +135,7 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
                   gene="gene_id",exon="exon_id",transcript="transcript_id") %>%
     group_by(transcript) %>%
     mutate(check = ifelse("UTR" %in% type, T,F)) %>%
-    filter(!(type == "exon" & check == T)) %>%
+    dplyr::filter(!(type == "exon" & check == T)) %>%
     ungroup()
   gtab$feature = gtab$type
   gtab$feature = stringr::str_replace(gtab$feature,"UTR","utr")
@@ -156,9 +156,9 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
     mutate(start = start - 25, end = end + 25) %>%
   data.table::fwrite(file="./coords.txt", sep="\t", row.names = F, col.names = F)
   Gtrack = Gviz::GeneRegionTrack(GenomicRanges::makeGRangesFromDataFrame(gtab, keep.extra.columns = T), chromosome = chrom,
-                                 name = gene_in, transcriptAnnotation = "transcript", 
-                                 just.group="below", genome=genome_sp, fill="orange", color="black", col = "black", 
-                                 background.title="darkmagenta", fontsize.group=16, 
+                                 name = gene_in, transcriptAnnotation = "transcript",
+                                 just.group="below", genome=genome_sp, fill="orange", color="black", col = "black",
+                                 background.title="darkmagenta", fontsize.group=16,
                                  fill=gtab$colors)
 
   #1bis : Annotation Track building
@@ -206,7 +206,3 @@ CoverPlot = function(genome_gr, gene_in, genome_sp, bamfiles, distZOOM=NULL, ann
       plotTracks(in.tracks, sizes = size.tracks, ylim = c(0,YMAX), to=starts+distZOOM, just.group="left")}
   }
 }
-
-
-
-

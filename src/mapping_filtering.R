@@ -22,14 +22,12 @@ reads = fread(
   args$bed,
   col.names = c("seqnames.rd","start.rd","end.rd","strand.rd","read.id","frag.id"),
   nThread=1)
-#exons
-gtf = fread(
-  args$exons, nThread=1)
 
+#exons
+gtf = fread(args$exons, nThread=1)
 
 #BED file 1-based conversion
 reads$start.rd = reads$start.rd + 1
-
 
 #Processing of reads
 #------------------
@@ -37,7 +35,7 @@ message("Processing of reads...")
 reads = reads %>%
   dplyr::filter(start.rd>min(gtf$start)-1e5 & end.rd<max(gtf$end)+1e5) %>%
   #discard pcr replicates
-  distinct(seqnames.rd,start.rd,end.rd,strand.rd,frag.id, .keep_all = T)
+  dplyr::distinct(seqnames.rd,start.rd,end.rd,strand.rd,frag.id, .keep_all = T)
 
 #Mapping reads into the genome
 #-----------------------------
@@ -49,12 +47,11 @@ hits = GenomicRanges::findOverlaps(
                                           end.field = "end", strand.field = "strand")
 )
 mapped = cbind(reads[hits@from,], gtf[hits@to,]) %>%
-  dplyr::filter(strand.rd==strand) %>% 
+  dplyr::filter(strand.rd==strand) %>%
   dplyr::select(!seqnames) %>%
   tidyr::separate(col="read.id", into=c("readID","splice.pos"), sep="/", remove = F) %>%
   data.table() %>%
   dplyr::mutate(splice.pos=as.numeric(as.character(splice.pos)))
-
 
 #Filtering operations
 #--------------------
@@ -63,7 +60,7 @@ message("Filtering operations...")
 #a. discard fragments associated to intergenics/intronics reads
 message("a. discard fragments associated to intergenics/intronics reads...")
 reads = mapped %>%
-  filter(!frag.id %in% (reads %>% filter(!(read.id %in% mapped$read.id)))$frag.id)
+  dplyr::filter(!frag.id %in% (reads %>% dplyr::filter(!(read.id %in% mapped$read.id)))$frag.id)
 
 rm(mapped)
 rm(hits)
@@ -76,7 +73,7 @@ trs.todel = (reads %>%
                       check=ifelse(exon_number==1 & strand=="-" & end.rd>end,"wrong_overlap",check),
                       check=ifelse(exon_number!=1 & (start.rd<start | end.rd>end), "wrong_overlap",check)) %>%
                dplyr::filter(check=="wrong_overlap") %>%
-               distinct(frag.id, transcript_name) %>%
+               dplyr::distinct(frag.id, transcript_name) %>%
                dplyr::reframe(ftrs = paste0(frag.id,"_",transcript_name)))$ftrs
 reads = reads %>%
   dplyr::mutate(ftrs = paste0(frag.id,"_",transcript_name)) %>%
@@ -93,29 +90,25 @@ trs.todel = (reads %>%
   dplyr::filter(nb.readIDs_tot!=nb.readIDs_tot) %>%
   data.table())$ftrs
 reads = reads %>%
-  dplyr::filter(!(ftrs %in% trs.todel))
+  dplyr::filter(!(ftrs %in% trs.todel)) %>% data.table()
 
 
 #d. checks spliced reads coherency
 message("d. checks spliced reads coherency...")
 reads = reads %>%
   group_by(readID) %>%
-  mutate(nb.splices = n_distinct(splice.pos), splice.pos = as.numeric(as.character(splice.pos)),
-         splice.pos = ifelse(is.na(splice.pos), 0, splice.pos)) %>%
-  data.table()
+  dplyr::mutate(nb.splices = n_distinct(splice.pos), splice.pos = as.numeric(as.character(splice.pos)), splice.pos = ifelse(is.na(splice.pos), 0, splice.pos)) %>% data.table()
 
 spliceds = reads %>% dplyr::filter(nb.splices>1) %>% arrange(readID)
-unspliceds = reads %>% dplyr::filter(nb.splices==1) %>% filter(splice.pos<=1)
+unspliceds = reads %>% dplyr::filter(nb.splices==1) %>% dplyr::filter(splice.pos<=1)
 
 #---- bordering criteria
 message("bordering criteria...")
-trs.todel = (spliceds %>%
-  dplyr::filter((start.rd != start) & (end.rd != end)) %>%
-  distinct(ftrs))$ftrs
+trs.todel = (spliceds %>% dplyr::filter((start.rd != start) & (end.rd != end)) %>% distinct(ftrs))$ftrs
 spliceds = spliceds %>% dplyr::filter(!(ftrs %in% trs.todel))
 unspliceds = unspliceds %>% dplyr::filter(!(ftrs %in% trs.todel))
 
-#---- Number of splices on a transcript 
+#---- Number of splices on a transcript
 message("nb splices coherency...")
 #a
 trs.todel = (spliceds %>%
@@ -133,7 +126,6 @@ trs.todel = (spliceds %>%
   distinct(ftrs))$ftrs
 spliceds = dplyr::filter(spliceds, !(ftrs %in% trs.todel))
 unspliceds = dplyr::filter(unspliceds, !(ftrs %in% trs.todel))
-
 
 #---- concordance unspliced/spliced fragments
 message("concordance unspliceds/spliceds fragments")
@@ -156,8 +148,6 @@ rm(tmp)
 rm(trs.todel)
 gc()
 
-print(reads)
-
 #Calculate relative coordinates
 #------------------------------
 message("Calculate relative coordinates...")
@@ -170,11 +160,10 @@ reads = reads %>%
 #Writing
 #-------
 message("writing...")
-reads %>% 
+reads %>%
   dplyr::select(!c(collapsed,nb.splices,collapsed)) %>%
   dplyr::distinct() %>%
   dplyr::group_by(transcript_name, frag.id) %>%
   dplyr::mutate(fg.start = min(start.rd), fg.end=max(end.rd)) %>%
   ungroup() %>%
   saveRDS(file = args$output_path)
-  

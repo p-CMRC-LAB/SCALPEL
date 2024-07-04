@@ -40,7 +40,7 @@ groupExon_ends = function(x, distance_exon){
 collapseIsoforms = function(x, distance_transcriptome, distance_ex){
   #function for collapsing Isoforms
   #================================
-  
+
   #get isoforms with similar ends
   strand = x$strand[1]
   x.tmp = x %>%
@@ -50,7 +50,7 @@ collapseIsoforms = function(x, distance_transcriptome, distance_ex){
   simIsoforms = group_by(x.tmp, clusters) %>% dplyr::filter(n()>1)
   simIsoforms = lapply(split(simIsoforms, simIsoforms$clusters), function(x) x$transcript_name)
   x = left_join(x, distinct(x.tmp, transcript_name, clusters))
-  
+
   #filter input tab
   collapsed = data.frame(transcript_name=character(0),collapsed=character(0))
   #loop on similar isoforms
@@ -95,7 +95,7 @@ collapseIsoforms = function(x, distance_transcriptome, distance_ex){
       }
     }
   }
-  return(na.omit(collapsed))
+  return(stats::na.omit(collapsed))
 }
 
 
@@ -104,7 +104,7 @@ collapseIsoforms = function(x, distance_transcriptome, distance_ex){
 #----------------
 print("File opening...")
 gtf = fread(GTF_PATH)
-qf = fread(QF_PATH, col.names=c("gene_name","transcript_name", "bulk_TPMperc")) %>% filter(transcript_name %in% gtf$transcript_name)
+qf = fread(QF_PATH, col.names=c("gene_name","transcript_name", "bulk_TPMperc")) %>% dplyr::filter(transcript_name %in% gtf$transcript_name)
 
 if(nrow(qf)==0){
 
@@ -114,18 +114,20 @@ if(nrow(qf)==0){
 
     #Formatting table (A)
     #----------------
+    print("Formatting table...")
     gtf = gtf %>%
     distinct(seqnames,start,end,width,strand,gene_name,transcript_name) %>%
     arrange(seqnames,start,desc(end)) %>%
-    na.omit() %>%
+    stats::na.omit() %>%
     group_by(transcript_name) %>%
     dplyr::mutate(exon_number = ifelse(strand=="+",n():1,1:n())) %>%
     arrange(transcript_name) %>%
-    data.table() 
-    
+    data.table()
+
 
     #Calculate relative coordinates (B)
     #------------------------------
+    print("Calculate relative coordinates...")
     gtf = gtf %>%
     arrange(transcript_name,exon_number) %>%
     group_by(transcript_name) %>%
@@ -161,7 +163,7 @@ if(nrow(qf)==0){
     arrange(seqnames,start,desc(end),transcript_name)
 
 
-    #Collapse similar isoforms 
+    #Collapse similar isoforms
     #-------------------------
     #processing
     collapseds.tab = gtf %>%
@@ -181,7 +183,7 @@ if(nrow(qf)==0){
     gtf = left_join(gtf, qf) %>%
     dplyr::filter(!is.na(bulk_TPMperc)) %>%
     group_by(collapsed) %>%
-    mutate(check=ifelse(collapsed!="none",max(bulk_TPMperc),bulk_TPMperc), 
+    mutate(check=ifelse(collapsed!="none",max(bulk_TPMperc),bulk_TPMperc),
             end=ifelse(strand=="+" & collapsed!="none" & exon_number==1,max(end),end),
             start=ifelse(strand=="-" & collapsed!="none" & exon_number==1,min(start),start)) %>%
     dplyr::filter(bulk_TPMperc==check) %>%
@@ -192,14 +194,14 @@ if(nrow(qf)==0){
 
     #6) Writing
     #all exons entries
-    fwrite(gtf, file = args$OUTPUT, sep="\t", nThread=1)                                                                                                                                                                           
+    fwrite(gtf, file = args$OUTPUT, sep="\t", nThread=1)
 
     #all genes with unique isoforms
-    gtf_unique = gtf %>% dplyr::select(gene_name,transcript_name) %>% 
-    distinct() %>% 
+    gtf_unique = gtf %>% dplyr::select(gene_name,transcript_name) %>%
+    distinct() %>%
     group_by(gene_name) %>%
     mutate(counts = n()) %>%
-    filter(counts == 1) %>%
+    dplyr::filter(counts == 1) %>%
     ungroup()
     gtf_unique = gtf_unique[,c("gene_name","counts")]
     fwrite(gtf_unique, file=args$OUTPUT_UNIQUE, sep="\t")

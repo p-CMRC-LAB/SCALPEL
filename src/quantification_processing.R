@@ -26,7 +26,7 @@ lapply(list.files(path = ".", pattern = "*.sf", full.names = T), function(x){
     #get MeanTPM & discard null transcrips in bulk
     group_by(Name) %>%
     summarise(meanTPM = mean(TPM)) %>%
-    filter(meanTPM!=0) %>%
+    dplyr::filter(meanTPM!=0) %>%
     rename(transcript_id="Name") %>%
     #include gene metadata
     left_join(distinct(gtf, gene_name, transcript_name, transcript_id)) %>%
@@ -56,5 +56,3 @@ lapply(split(gtf, gtf$seqnames), function(x){
     x = distinct(x, seqnames,start,end,width,strand,gene_name,transcript_name,exon_number)
     data.table::fwrite(x, file = paste0(x$seqnames[1],".gtf"), sep="\t", nThread=1)
 })
-
-

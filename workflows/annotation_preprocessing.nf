@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-/* 
+/*
 Loading of ANNOTATION data & preprocessing
 ==========================================
 */
@@ -16,7 +16,7 @@ process salmon_transcriptome_indexing{
         path('transcriptome_index')
     script:
         """
-        salmon index -t ${transcriptome_reference} -i transcriptome_index --gencode 
+        salmon index -t ${transcriptome_reference} -i transcriptome_index --gencode
         """
 }
 
@@ -51,7 +51,7 @@ process tpm_counts_average{
         path bulk_quants
         path gtf_annotation_reference
     output:
-        tuple file("merge_quants.txt"), path("*.gtf")
+        tuple file("merge_quants.txt"), file("*.gtf")
     script:
         """
         Rscript ${baseDir}/src/quantification_processing.R ${gtf_annotation_reference} merge_quants.txt
@@ -76,5 +76,3 @@ process isoform_selection_weighting{
         Rscript ${baseDir}/src/gtf_processing.R ${gtf} ${merged_quants} ${dt_thr} ${de_thr} ${gtf.baseName}.exons ${gtf.baseName}.exons_unique
         """
 }
-
-
