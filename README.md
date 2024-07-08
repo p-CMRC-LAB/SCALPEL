@@ -164,18 +164,18 @@ DIU_table.csv  iDGE_seurat.RDS.  SRR6129050/SRR6129050_APA_DGE.txt   SRR6129051/
 chr10_collapsed_isoforms.txt  chr13_collapsed_isoforms.txt  chr16_collapsed_isoforms.txt ...
 ```
 
+**NB:**
+_**Important: The chromosome names must to be consistent between the BAM file and the annotation files. If the BAM file contains the '_chr_' character, the GTF and FASTA annotation files, and the internal priming reference annotation should contains the '_chr_' character, and inversely !**_
+
+_**The internal priming reference files provided contains by default the '_chr_' character in the chromosome names !!**_
+
+_**Be careful to delete the _work_ directory containing nextflow temporary files** when scalpel runs all its processs sucessfully and you don’t plan to relaunch scalpel with modified parameters. (This folder can fill an high memory physical space depending of the size of input files analyzed)_
+
+
 ## More about SCALPEL Usage
 
 - Example of SCALPEL application on 10X scRNA-seq
 - Example of SCALPEL application on DropSeq scRNA-seq
-
-
-
-**Important: The chromosome names must to be consistent between the BAM file and the annotation files. If the BAM file contains the '_chr_' character, the GTF and FASTA annotation files, and the internal priming reference annotation should contains the '_chr_' character, and inversely !**
-
-**The internal priming reference files provided contains by default the '_chr_' character in the chromosome names !!**
-
-**Be careful to delete the _work_ directory containing nextflow temporary files** when scalpel runs all its processs sucessfully and you don’t plan to relaunch scalpel with modified parameters. (This folder can fill an high memory physical space depending of the size of input files analyzed)
 
 
 ## Downstream analysis
