@@ -1,4 +1,4 @@
-# SCALPEL , a Nextflow based tool for the quantification of transcript isoforms at single-cell resolution
+# SCALPEL , a nextflow based tool for the quantification of isoforms at single-cell resolution
 
 <!-- PROJECT LOGO -->
 <!-- <br />
@@ -18,7 +18,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-**SCALPEL** is a toolkit for the characterization of Alternative ployadenylation (APA) and the Isoform quantification at single-cell resolution.
+**SCALPEL** is a toolkit for the characterization of Alternative ployadenylation (APA) and the Isoform quantification using 3' tag-based scRNA-seq data.
 
 Use the `BLANK_README.md` to get started.
 
