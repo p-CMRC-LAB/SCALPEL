@@ -69,9 +69,9 @@ For running, SCALPEL requires to provide specific input files path & parameters:
 -   _Sequencing type (chromium or dropseq)_  **[--sequencing]**
 
 1.  Required, **[\-\-samplesheet]**: Provide within a  **CSV**  (ex: samplesheet.csv) file the following paths : 
-    -   (In case of Dropseq based scRNA-seq sample [--sequencing  **dropseq**])  
-        >_<SAMPLE_NAME>_,  _<FASTQ1_FILE_PATH>_,  _<FASTQ2_FILE_PATH>_,_<CELLRANGER_REPOSITORY_PATH>_
     -   (In case of 10X based scRNA-seq sample [--sequencing  **chromium**])  
+        >_<SAMPLE_NAME>_,  _<FASTQ1_FILE_PATH>_,  _<FASTQ2_FILE_PATH>_,_<CELLRANGER_REPOSITORY_PATH>_
+    -   (In case of DropSeq based scRNA-seq sample [--sequencing  **dropseq**])  
         >_<SAMPLE_NAME>_,  _<FASTQ1_PATH>_,  _<FASTQ2_PATH>_,_<BAM_PATH>_, _<BAM_INDEX_PATH>_,_<DGE_PATH>_
 
 2. Optional, **[\-\-barcodes]**: Provide within a **CSV** (ex: barcodes_whitelist.csv) for each input sample, a barcode whitelist file path:
