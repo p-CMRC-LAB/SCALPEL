@@ -196,8 +196,8 @@ _**Be careful to delete the _work_ directory containing nextflow temporary files
 
 ## More about SCALPEL Usage
 
-- Example of SCALPEL application on 10X scRNA-seq
-- Example of SCALPEL application on DropSeq scRNA-seq
+- [Example of SCALPEL application on 10X scRNA-seq](https://github.com/p-CMRC-LAB/SCALPEL/wiki/SCALPEL-application-on-10X-scRNA%E2%80%90seq)
+- [Example of SCALPEL application on DropSeq scRNA-seq](https://github.com/p-CMRC-LAB/SCALPEL/wiki/SCALPEL-application-on-DropSeq-scRNA%E2%80%90seq)
 
 
 ## Downstream analysis
