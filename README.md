@@ -88,6 +88,16 @@ For running, SCALPEL requires to provide specific input files path & parameters:
 <SAMPLE_NAME>,<BARCODE_CLUSTERS_FILE_PATH>
 ```
 
+### Annotation files
+
+- **Genome reference files**
+Following the organism for the study, the reference genome annotation files (**[--gtf]**, GTF) and reference transcript sequence (**[--transcriptome]**, FASTA) can be downloaded on [GENCODE](https://www.gencodegenes.org/) repository.
+
+- **Internal priming files which reference all the internal priming positions**
+- [(Human) Internal priming annotation - GRCh38](https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/databases/GRCh38_2020_A_polyA.track.tar.gz) 
+- [(Mouse) Internal priming annotation - mm10](https://data.cyverse.org/dav-anon/iplant/home/franzx5/Scalpel_docs/databases/mm10_polya.track.tar.gz) 
+
+
 ### SCALPEL execution
 After activating the _scalpel_conda_ CONDA environment, SCALPEL can be executed using Nextflow: 
 - All the computational ressource required for the execution by Nextflow can be defined within the _**SCALPEL/nextflow.config**_ file:
