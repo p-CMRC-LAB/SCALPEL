@@ -83,7 +83,6 @@ For running, SCALPEL requires to provide specific input files path & parameters:
 ### - SCALPEL Execution
 After activating the _scalpel_conda_ CONDA environment, SCALPEL can be executed using Nextflow: 
 - All the computational ressource required for the execution by Nextflow can be defined within the _**SCALPEL/nextflow.config**_ file:
-
 ```
 /* Define Nextflow configuration settings for SCALPEL pipeline execution */
 /* ===================================================================== */
@@ -113,8 +112,32 @@ process {
 ```
 
 - **Execution**
+
+1. Configurate sample file:
 ```
-nextflow run -resume SCALPEL/main.nf \
+> cat samplesheet.csv
+SRR6129050,SRR6129050_S1_L001_R1_001.fastq.gz,SRR6129050_S1_L001_R2_001.fastq.gz,/data/fake_data/DATAS/GSE104556/SAMPLES/SRR6129050/
+SRR6129051,SRR6129051_S1_L001_R1_001.fastq.gz,SRR6129051_S1_L001_R2_001.fastq.gz,/data/fake_data/DATAS/GSE104556/SAMPLES/SRR6129051/
+```
+
+2. (**Optional**), Configurate barcode whitelist file:
+```
+> cat barcodes_whitelist.csv
+SRR6129050,/data/fake_data/NEW/SCALPEL/10X/SRR6129050_curatedBarcodes.txt
+SRR6129051,/data/fake_data/NEW/SCALPEL/10X/SRR6129051_curatedBarcodes.txt
+
+> head /data/fake_data/NEW/SCALPEL/10X/SRR6129050_curatedBarcodes.txt
+AAACCTGAGCTTATCG-1
+AAACCTGGTTGAGTTC-1
+AAACCTGTCAACGAAA-1
+AAACGGGCACAGGTTT-1
+AAACGGGTCATTTGGG-1
+...
+```
+
+3. Running
+```
+> nextflow run -resume SCALPEL/main.nf \
     --sequencing chromium \
     --samplesheet samplesheet.csv \
     --transcriptome gencode.vM10.transcripts.fa \
