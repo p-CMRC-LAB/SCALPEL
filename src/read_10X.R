@@ -28,14 +28,7 @@ barcodes.tab %>%
   fwrite(file = paste0(sample_name, ".barcodes.txt"), col.names = F)
 
 #write Matrix
-<<<<<<< HEAD
 colnames(s.mat) = barcodes.tab$V1
 s.mat = s.mat %>% data.table(keep.rownames=T)
 colnames(s.mat)[1] = "GENE"
 s.mat %>% fwrite(file = paste0(sample_name, ".counts.txt"), sep="\t", row.names=F)
-=======
-colnames(s.mat) = barcodes.tab$V1 
-s.mat = s.mat %>% data.table(keep.rownames=T)
-colnames(s.mat)[1] = "GENE"
-s.mat %>% fwrite(file = paste0(sample_name, ".counts.txt"), sep="\t", row.names=F)
->>>>>>> 0c3fe80469feb05951ba0efe3f2fb8270c284a47
