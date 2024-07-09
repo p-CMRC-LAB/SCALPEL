@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 name: scalpel_conda
 channels:
   - r
@@ -299,3 +300,34 @@ dependencies:
   - zipp=3.17.0=py39h06a4308_0
   - zlib=1.2.13=h4ab18f5_6
   - zstd=1.5.6=ha6fb4c9_0
+=======
+name: scalpel_env
+channels:
+  - bioconda
+  - r
+  - conda-forge
+  - anaconda
+dependencies:
+  - nextflow
+  - salmon
+  - r-argparse
+  - r-data.table
+  - r-dplyr
+  - r-tidyr
+  - bioconductor-rtracklayer
+  - r-stringr
+  - bioconductor-mscoreutils
+  - samtools
+  - bedops
+  - bioconductor-genomicranges
+  - r-ggplot2
+  - r-scales
+  - argparse
+  - pandas
+  - r-httr
+  - igraph
+  - r-leiden
+  - r-reshape
+  - r-sctransform
+  - r-stringi
+>>>>>>> 0c3fe80469feb05951ba0efe3f2fb8270c284a47
