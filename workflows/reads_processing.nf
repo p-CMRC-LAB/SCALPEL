@@ -30,20 +30,33 @@ workflow samples_loading {
             read_10Xrepo(samples_paths.map{ it=tuple(it[0], it[3]) })
 
             /* formatting */
-            read_10Xrepo.out.map{ it = tuple( it[0], file(it[1]), file(it[2]), file(it[3]), file(it[4]) ) }.set{ sample_ids_ch }
+            read_10Xrepo.out.map{ it = tuple( it[0], file(it[1]), file(it[2]), file(it[4]) ) }.set{ samples_selects }
 
         } else if ( "${params.sequencing}" == "dropseq") {
 
-            samples_paths.map{ it = tuple( it[0], file(it[3]), file(it[4]), file(it[5]), file(it[6]) ) }.set{ sample_ids_ch }
+            samples_paths.map{ it = tuple( it[0], file(it[3]), file(it[4]), file(it[5]) ) }.set{ samples_selects }
 
         } else
             error( "Incoherency in [--sequencing] args !!" )
 
+        if (params.barcodes != null) {
+            /* parse barcodes file */
+            ( Channel.fromPath(params.barcodes) | splitCsv(header:false) ).set{ barcodes_paths }
+            (samples_selects.join(barcodes_paths, by:[0])).set{ samples_selects }
+            selected_isoforms.flatMap { it = it[0] }.combine(samples_selects).set{ samples_selects }
+
+        } else {
+
+            selected_isoforms.flatMap { it = it[0] }.combine(samples_selects.map{ it = tuple(it[0], it[1], it[2], it[3], null) }).set{ samples_selects }
+
+        }
+
         /* processing of input BAM file... */
-        bam_splitting( selected_isoforms.flatMap { it = it[0] }.combine(sample_ids_ch) )
+        bam_splitting( samples_selects )
 
     emit:
         selected_bams = bam_splitting.out
+        sample_files = samples_selects
 }
 
 

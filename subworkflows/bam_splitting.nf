@@ -4,13 +4,13 @@
 */
 
 process bam_splitting {
-        tag "${sample_id}, ${chr}"
+        tag "${sample_id}, ${chr}, ${bc_path}"
         publishDir "./results/reads_processing/bam_splitting/${sample_id}"
         cache true
         label 'small_mem'
 
 	input: 
-            tuple val(chr), val(sample_id), path(bam), path(bai), path(barcodes), path(dge_matrix)
+            tuple val(chr), val(sample_id), path(bam), path(bai), path(dge_matrix), val(bc_path)
 	output:
             tuple val(sample_id), val("${chr}"), path("${chr}.bam")
 	script:
@@ -22,7 +22,7 @@ process bam_splitting {
                     #input files
                     #Filter reads , Remove duuplicates and split by chromosome
                     #a) filter reads...
-                    samtools view -@ 1 -b ${bam} ${chr} -D XC:${barcodes} --keep-tag "XC,XM" | samtools sort > tmp.bam
+                    samtools view --subsample ${params.subsample} -b ${bam} ${chr} -D XC:${bc_path} --keep-tag "XC,XM" | samtools sort > tmp.bam
                     #Remove all PCR duplicates ...
                     samtools markdup tmp.bam ${chr}.bam -r --barcode-tag XC --barcode-tag XM
                     #delete all empty files ...
@@ -41,8 +41,7 @@ process bam_splitting {
                     #input files
                     #Filter reads , Remove duuplicates and split by chromosome
                     #a) filter reads...
-                    zcat -f ${barcodes} > bc.txt
-                    samtools view -@ 1 -b ${bam} ${chr} -D XC:bc.txt --keep-tag "XC,XM" | samtools sort > tmp.bam
+                    samtools view --subsample ${params.subsample} -b ${bam} ${chr} --keep-tag "XC,XM" | samtools sort > tmp.bam
                     #Remove all PCR duplicates ...
                     samtools markdup tmp.bam ${chr}.bam -r --barcode-tag XC --barcode-tag XM
                     #delete all empty files ...
@@ -60,7 +59,7 @@ process bam_splitting {
                     #Chromium_seq
                     #============
                     #Filter reads , Remove duuplicates and split by chromosome
-                    samtools view -@ 1 -b ${bam} ${chr} -D CB:${barcodes} --keep-tag "CB,UB" | samtools sort > tmp.bam
+                    samtools view --subsample ${params.subsample} -b ${bam} ${chr} -D CB:${bc_path} --keep-tag "CB,UB" | samtools sort > tmp.bam
                     #Remove all PCR duplicates ...
                     samtools markdup tmp.bam ${chr}.bam -r --barcode-tag CB --barcode-tag UB
                     #delete all empty files ...
@@ -77,8 +76,7 @@ process bam_splitting {
                     #Chromium_seq
                     #============
                     #Filter reads , Remove duuplicates and split by chromosome
-                    zcat -f ${barcodes} | sort -u > bc.txt
-                    samtools view -@ 1 -b ${bam} ${chr} -D CB:bc.txt --keep-tag "CB,UB" | samtools sort > tmp.bam
+                    samtools view --subsample ${params.subsample} -b ${bam} ${chr} --keep-tag "CB,UB" | samtools sort > tmp.bam
                     #Remove all PCR duplicates ...
                     samtools markdup tmp.bam ${chr}.bam -r --barcode-tag CB --barcode-tag UB
                     #delete all empty files ...

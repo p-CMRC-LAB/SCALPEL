@@ -7,6 +7,7 @@ process read_10Xrepo{
 	tag "${sample_id}"
 	publishDir "./results/sample_files/", overwrite: true
 	cache true
+        label 'small_mem'
 
 	input:
 		tuple val(sample_id), val(sample_repo)

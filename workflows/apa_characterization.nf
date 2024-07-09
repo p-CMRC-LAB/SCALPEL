@@ -7,7 +7,7 @@
 
 process differential_isoform_usage{
 	tag "${objs}"
-	publishDir "./results/", overwrite: true, mode: 'copy'
+	publishDir "./results/final_results/", overwrite: true, mode: 'copy'
         label 'big_mem'
 
 	input:
@@ -28,4 +28,23 @@ process differential_isoform_usage{
 			cp ${baseDir}/src/scalpel_library.R .
 			Rscript ${baseDir}/src/analysis_samples.R ./ ${params.clusters} DIU_table.csv
 			"""
+}
+
+
+process generation_filtered_bams{
+    tag "${sampleID}"
+    publishDir "./results/final_results/", overwrite: true, mode: 'copy'
+    label 'big_mem'
+
+
+    input:
+        tuple val(sampleID), file(bams)
+
+    output:
+        file("filtered.BAM")
+
+    script:
+        """
+	samtools merge -o filtered.BAM ${bams} -@ ${task.cpus}
+        """
 }

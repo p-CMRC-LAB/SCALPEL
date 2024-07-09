@@ -35,7 +35,7 @@ process salmon_bulk_quantification{
         path "${pair_id}.sf"
     script:
         """
-        salmon quant -i ${transcriptome_index} -l A -g ${gtf_annotation_reference} -1 ${fastq1} -2 ${fastq2} -o ${pair_id} --validateMappings
+        salmon quant -i ${transcriptome_index} -l A -g ${gtf_annotation_reference} -1 ${fastq1} -2 ${fastq2} -o ${pair_id} --validateMappings -p ${task.cpus}
         mv ${pair_id}/quant.sf ${pair_id}.sf
         """
 }
@@ -61,7 +61,7 @@ process tpm_counts_average{
 
 process isoform_selection_weighting{
     tag "${gtf.baseName}, ${merged_quants}"
-    publishDir "./results/annotation_processing/isoform_processing", overwrite: true
+    publishDir "./results/annotation_processing/isoform_processing", overwrite: true, mode: 'copy'
     cache true
     label "small_mem"
 

@@ -174,7 +174,7 @@ if(nrow(qf)==0){
     mutate(collapsed = ifelse(is.na(collapsed),"none",collapsed))
 
     #writing
-    distinct(gtf, transcript_name, collapsed) %>%
+    distinct(gtf, gene_name, transcript_name, collapsed) %>%
     dplyr::filter(collapsed!="none") %>%
     distinct() %>%
     fwrite(file = paste0(gtf$seqnames[1],"_collapsed_isoforms.txt"), sep="\t", col.names = F, row.names = F)

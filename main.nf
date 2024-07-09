@@ -8,19 +8,6 @@ Barcelona, SPAIN
 =================================================================================================
 */
 
-/*optional args*/
-params.barcodes = null
-params.clusters = null
-
-/* - Import Functions / Modules / Workflows / Subworkflows
-=================================================================================================
-*/
-include { salmon_transcriptome_indexing; salmon_bulk_quantification; tpm_counts_average; isoform_selection_weighting } from './workflows/annotation_preprocessing.nf'
-include { samples_loading; bedfile_conversion; reads_mapping_and_filtering; ip_splitting; ip_filtering } from './workflows/reads_processing.nf'
-include { probability_distribution; fragment_probabilities; cells_splitting; em_algorithm; cells_merging; dge_generation } from './workflows/isoform_quantification.nf'
-include { differential_isoform_usage } from './workflows/apa_characterization.nf'
-
-
 /* - Define SCALPEL default params variables
 =============================================================================
 */
@@ -29,11 +16,72 @@ params.de_threshold = 30
 params.ip_threshold = 60
 params.gene_fraction = "98%"
 params.binsize = 20
-params.cellranger = true
 params.output = "./results"
+params.subsample = 1
+
+/*optional args*/
+params.barcodes = null
+params.clusters = null
+params.help = null
+
+
+/* initialize require args to null */
+params.transcriptome = null
+params.gtf = null
+params.ipdb = null
+params.samplesheet = null
+params.sequencing = null
+
+/* - Import Functions / Modules / Workflows / Subworkflows
+=================================================================================================
+*/
+include { salmon_transcriptome_indexing; salmon_bulk_quantification; tpm_counts_average; isoform_selection_weighting } from './workflows/annotation_preprocessing.nf'
+include { samples_loading; bedfile_conversion; reads_mapping_and_filtering; ip_splitting; ip_filtering } from './workflows/reads_processing.nf'
+include { probability_distribution; fragment_probabilities; cells_splitting; em_algorithm; cells_merging; dge_generation } from './workflows/isoform_quantification.nf'
+include { differential_isoform_usage; generation_filtered_bams } from './workflows/apa_characterization.nf'
+
+
+/* In case of Help args */
+/* ==================== */
+
+if( params.help != null )
+    error( """\
+    ===============================
+    SCALPEL - N F   P I P E L I N E
+    ===============================
+    Author: PLASS Lab ; Franz AKE
+    *****************
+    P-CMRC - Barcelona, SPAIN
+
+    input files:
+    - Annotation required files(required):
+        - transcriptome reference [--transcriptome]: ${params.transcriptome}
+        - annotation GTF reference [--gtf]: ${params.gtf}
+        - internal priming annotation [--ipdb]: ${params.ipdb}
+
+
+    - Reads processing files (required):
+        - samplesheet [--samplesheet]: ${params.samplesheet}
+
+    - Params:
+        Required:
+        - sequencing type (required): ${params.sequencing}
+
+        Optional:
+        - barcodes whitelist [--barcodes] (optional): ${params.barcodes}
+        - cell clusters annotation [--clusters] (optional): ${params.clusters}
+        - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp): ${params.dt_threshold}
+        - transcriptomic end distance threhsold [--de_threshold] (optional, default 30bp): ${params.de_threshold}
+        - minimal distance of internal priming sites (IP) from isoform 3'ends [--ip_threshold] (optional, 60nuc): ${params.ip_threshold}
+        - gene fraction abundance threshold [--gene_fraction] (optional, default '98%'): ${params.gene_fraction}
+        - binsize threshold for transcriptomic distance based probability [--binsize] (optional, default '20): ${params.binsize}
+        - reads subsampling threshold [--subsample] (optional, default 1): ${params.subsample}
+
+    """.stripIndent())
 
 
 /* Check required args */
+/* =================== */
 if( params.samplesheet==null )
     error( "Provide samplesheet path  [--samplesheet]")
 
@@ -48,6 +96,8 @@ if( params.ipdb==null )
 
 if ( params.sequencing==null )
     error(" Provide sequencing type (dropseq / chromium)  [--sequencing]" )
+
+
 
 /* - Print input Params & Files information to STDOUT
 =============================================================================
@@ -80,9 +130,14 @@ log.info """\
         - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp): ${params.dt_threshold}
         - transcriptomic end distance threhsold [--de_threshold] (optional, default 30bp): ${params.de_threshold}
         - minimal distance of internal priming sites (IP) from isoform 3'ends [--ip_threshold] (optional, 60nuc): ${params.ip_threshold}
+        - gene fraction abundance threshold [--gene_fraction] (optional, default '98%'): ${params.gene_fraction}
+        - binsize threshold for transcriptomic distance based probability [--binsize] (optional, default '20): ${params.binsize}
+        - reads subsampling threshold [--subsample] (optional, default 1): ${params.subsample}
 
 """.stripIndent()
 
+
+    
 
 /* - Workflows
 =============================================================================
@@ -130,7 +185,7 @@ workflow reads_processing {
         samples_loading(samples_paths, selected_isoforms)
 
         /* - Conversion of BAM to BED file */
-        bedfile_conversion(samples_loading.out)
+        bedfile_conversion(samples_loading.out.selected_bams)
 
         /*format isoform channel*/
         selected_isoforms = samples_paths.flatMap{it = it[0]}.combine(selected_isoforms)
@@ -145,8 +200,9 @@ workflow reads_processing {
         ip_filtering(mappeds_reads.join(iptargets, by:[0,1]), "${params.ip_threshold}")
 
     emit:
-        splitted_bams = samples_loading.out.map{ it=it[2] }
+        splitted_bams = samples_loading.out.selected_bams.map{ it=tuple(it[0], it[2]) }
         filtered_reads = ip_filtering.out
+        sample_dge = samples_loading.out.sample_files.map{ it = tuple(it[1], it[4]) }
 }
 
 
@@ -158,7 +214,7 @@ workflow isoform_quantification {
         samples_paths
 
     main:
-        /* Calculate fragments transcriptomic porbabilities */
+        /* Calculate fragments transcriptomic probabilities */
         filtered_reads.flatMap{ it = [it[0,1,3]]}.set{ unique_reads }
         unique_reads.map{ sample_id, chr, reads -> tuple( sample_id, [chr, reads]) }.groupTuple(by: 0).map{ sample_id, files -> tuple( sample_id, files.flatten() )}.set{ unique_reads }
 
@@ -176,7 +232,7 @@ workflow isoform_quantification {
         cells_merging(em_algorithm.out.groupTuple(by: 0))
 
         /* DGE generation */
-        dge_generation(cells_merging.out.join(samples_paths.map{ it= tuple(it[0], file(it[6])) }))
+        dge_generation(cells_merging.out.join(samples_paths))
 
     emit:
         dges = dge_generation.out
@@ -188,10 +244,14 @@ workflow apa_characterization {
     /* workflow for differential isoform usage analysis */
     take:
         seurat_objs
+        bams
 
     main:
         /* seurat objects merging */
         differential_isoform_usage( seurat_objs.collect() )
+
+        /* Merge the filtered BAM files */
+        generation_filtered_bams( bams )
 
    /* emit:
         dius = differential_isoform_usage.out */
@@ -217,10 +277,10 @@ workflow {
 
     /* isoform quantification (C)
     ============================= */
-    isoform_quantification(reads_processing.out.filtered_reads, samples_paths)
+    isoform_quantification(reads_processing.out.filtered_reads, reads_processing.out.sample_dge)
 
     /* APA characterization (D)
     =========================== */
-    apa_characterization( isoform_quantification.out.flatMap{ it=it[2] } )
+    apa_characterization( isoform_quantification.out.flatMap{ it=it[2] }, reads_processing.out.splitted_bams.groupTuple(by: 0))
 
 }
