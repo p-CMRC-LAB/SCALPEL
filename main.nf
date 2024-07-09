@@ -253,8 +253,8 @@ workflow apa_characterization {
         /* Merge the filtered BAM files */
         generation_filtered_bams( bams )
 
-   /* emit:
-        dius = differential_isoform_usage.out */
+    emit:
+        dius = differential_isoform_usage.out
 }
 
 
