@@ -47,7 +47,7 @@ if(args$CLUSTERS == "NULL"){
 	seurat.obj$Clusters = seurat.obj$orig.ident
 }else{
 	#a. read clusters table
-	cluster_df = fread(args$CLUSTERS, col.names = c("Barcodes", "Clusters"))
+	cluster_df = fread(args$CLUSTERS, col.names = c("orig.ident", "Barcodes", "Clusters"))
 
 	#b merge cluster into the seurat object
 	seurat.obj$Clusters = (dplyr::left_join(seurat.obj@meta.data, cluster_df) %>% distinct(Barcodes, .keep_all=T))$Clusters
