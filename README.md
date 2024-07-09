@@ -83,9 +83,9 @@ For running, SCALPEL requires to provide specific input files path & parameters:
 <SAMPLE_NAME>,<BARCODE_WHITELIST_FILE_PATH>
 ```
 
-  3. (Optional, **[\-\-clusters]**: Provide within a **CSV** (ex: clusters.csv) for each input sample, a barcode whitelist file path:
+  3. (Optional, **[\-\-clusters]**: Provide within a tab-separated file (ex: clusters.txt) containing the cells annotation information. This file should contain 3 column associated to:
 ```sh
-<SAMPLE_NAME>,<BARCODE_CLUSTERS_FILE_PATH>
+<SAMPLE_NAME>,<BARCODE_CELL_TAGS>,<CLUSTER_ANNOTATION>
 ```
 
 ### Annotation files
@@ -153,6 +153,17 @@ AAACGGGTCATTTGGG-1
 ...
 ```
 
+3. (**Optional**), Configurate cluster annotation file **[--barcodes]**:
+```sh
+> cat clusters.txt
+SRR6129050  AAACCTGAGCTTATCG-1  RS1
+SRR6129050  AAACCTGGTTGAGTTC-1  RS1
+SRR6129050  AAACCTGTCAACGAAA-1  ES
+SRR6129051  AAACGGGCACAGGTTT-1  RS1
+SRR6129051  AAACGGGTCATTTGGG-1  ES
+...
+```
+
 3. **Running**
 ```sh
 > nextflow run -resume SCALPEL/main.nf \
@@ -161,7 +172,8 @@ AAACGGGTCATTTGGG-1
     --transcriptome gencode.vM10.transcripts.fa \
     --gtf gencode.vM21.annotation.gtf \
     --ipdb mm10.polyA.track \
-    --barcodes barcodes_whitelist.csv \ 
+    --barcodes barcodes_whitelist.csv \ (Optional)
+    --clusters clusters.txt \ (Optional)
 ```
 
 ### Results
