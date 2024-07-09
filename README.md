@@ -40,7 +40,7 @@ To get a local copy up and running follow these simple example steps.
 ```
 2. Install the required packages using the requirement.txt file in the SCALPEL folder
 ```sh
-> conda env create -f SCALPEL/requirements.yml
+> CONDA_CHANNEL_PRIORITY=flexible conda env create -f SCALPEL/requirements.yml
 > conda activate scalpel_conda
 ```
 3. Within the CONDA environnement, install the R package Seurat v5
