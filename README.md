@@ -10,7 +10,7 @@
 
 <div align="right">
   <a href="">
-    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/SPERMATOGENESIS/SCALPEL_pipeline.png" alt="SCALPEL" >
+    <img src="https://data.cyverse.org/dav-anon/iplant/home/franzx5/TUTO/PLOT0.png" alt="SCALPEL" >
   </a>
 </div>
 
@@ -19,8 +19,6 @@
 ## About The Project
 
 **SCALPEL** is a toolkit for the characterization of Alternative ployadenylation (APA) and the Isoform quantification using 3' tag-based scRNA-seq data.
-
-Use the `BLANK_README.md` to get started.
 
 
 <!-- GETTING STARTED -->
