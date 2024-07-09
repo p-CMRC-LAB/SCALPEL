@@ -96,7 +96,7 @@ Following the organism for the study, the reference genome annotation files (**[
 ## SCALPEL execution
 After activating the _scalpel_conda_ CONDA environment, SCALPEL can be executed using Nextflow: \
 You can print the Scalpel help documentation by running the following command:
-```sh
+```
 > nextflow run -resume SCALPEL/main.nf --help
 
 	SCALPEL - NF  P I P E L I N E
