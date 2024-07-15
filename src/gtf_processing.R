@@ -107,26 +107,7 @@ message("File opening...")
 message("GTF opening...")
 gtf = fread(GTF_PATH)
 
-message("process GTF to add exon number...")
-
-gtf_pos = dplyr::filter(gtf, strand=="+") %>%
-    dplyr::arrange(seqnames,transcript_name, start)
-
-gtf_neg = dplyr::filter(gtf, strand=="-") %>%
-    dplyr::arrange(seqnames, transcript_name, desc(start))
-
-gtf = rbind(gtf_pos, gtf_neg) %>%
-    dplyr::arrange(seqnames,transcript_name) %>%
-    data.table::data.table()
-
-head(gtf) %>% print()
-
-gtf = dplyr::group_by(gtf, transcript_name) %>%
-    dplyr::mutate(exon_number=1:n()) %>%
-    data.table::data.table()
-
-print(head(gtf))
-
+message("Bulk quantification file opening...")
 qf = fread(QF_PATH, col.names=c("gene_name","transcript_name", "bulk_TPMperc")) %>% dplyr::filter(transcript_name %in% gtf$transcript_name)
 
 if(nrow(qf)==0){
