@@ -50,7 +50,7 @@ read_tab = distinct(reads, dist_END, start.rd, end.rd) %>%
   group_by(dist_END) %>%
   reframe(read.counts = n()) %>%
   arrange(dist_END) %>%
-  na.omit() %>%
+  stats::na.omit() %>%
   data.table()
 colnames(read_tab) = c("transcriptomic_distance", "counts")
 
