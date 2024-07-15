@@ -66,7 +66,7 @@ em_algorithm = function(tab){
 }
 
 #file opening
-cell = fread(args$cell, col.names = c("bc","gene_name","transcript_name","umi","frag_prob_weighted"), nThread =1) %>% distinct() %>% na.omit()
+cell = fread(args$cell, col.names = c("bc","gene_name","transcript_name","umi","frag_prob_weighted"), nThread =1) %>% distinct() %>% stats::na.omit()
 
 #Perform EM algorithm
 print("EM algorithm...")
