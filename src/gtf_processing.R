@@ -49,7 +49,7 @@ collapseIsoforms = function(x, distance_transcriptome, distance_ex){
     dplyr::mutate(clusters = ifelse(strand=="-",groupExon_ends(start, distance_ex),groupExon_ends(end, distance_ex)))
   simIsoforms = group_by(x.tmp, clusters) %>% dplyr::filter(n()>1)
   simIsoforms = lapply(split(simIsoforms, simIsoforms$clusters), function(x) x$transcript_name)
-  x = left_join(x, distinct(x.tmp, transcript_name, clusters))
+  x = suppressMessages(dplyr::left_join(x, distinct(x.tmp, transcript_name, clusters)))
 
   #filter input tab
   collapsed = data.frame(transcript_name=character(0),collapsed=character(0))
@@ -102,8 +102,31 @@ collapseIsoforms = function(x, distance_transcriptome, distance_ex){
 
 # 1) File opening
 #----------------
-print("File opening...")
+message("File opening...")
+
+message("GTF opening...")
 gtf = fread(GTF_PATH)
+
+message("process GTF to add exon number...")
+
+gtf_pos = dplyr::filter(gtf, strand=="+") %>%
+    dplyr::arrange(seqnames,transcript_name, start)
+
+gtf_neg = dplyr::filter(gtf, strand=="-") %>%
+    dplyr::arrange(seqnames, transcript_name, desc(start))
+
+gtf = rbind(gtf_pos, gtf_neg) %>%
+    dplyr::arrange(seqnames,transcript_name) %>%
+    data.table::data.table()
+
+head(gtf) %>% print()
+
+gtf = dplyr::group_by(gtf, transcript_name) %>%
+    dplyr::mutate(exon_number=1:n()) %>%
+    data.table::data.table()
+
+print(head(gtf))
+
 qf = fread(QF_PATH, col.names=c("gene_name","transcript_name", "bulk_TPMperc")) %>% dplyr::filter(transcript_name %in% gtf$transcript_name)
 
 if(nrow(qf)==0){
@@ -114,7 +137,7 @@ if(nrow(qf)==0){
 
     #Formatting table (A)
     #----------------
-    print("Formatting table...")
+    message("Formatting table...")
     gtf = gtf %>%
     distinct(seqnames,start,end,width,strand,gene_name,transcript_name) %>%
     arrange(seqnames,start,desc(end)) %>%
@@ -127,7 +150,7 @@ if(nrow(qf)==0){
 
     #Calculate relative coordinates (B)
     #------------------------------
-    print("Calculate relative coordinates...")
+    message("Calculate relative coordinates...")
     gtf = gtf %>%
     arrange(transcript_name,exon_number) %>%
     group_by(transcript_name) %>%
@@ -155,6 +178,7 @@ if(nrow(qf)==0){
 
     #Truncate isoforms within transcriptomic distance threshold
     #----------------------------------------------------------
+    message("Truncate isoforms within transcriptomic distance threshold...")
     gtf = gtf %>%
     dplyr::filter(startR < DT_THRESHOLD) %>%
     mutate(start = ifelse(strand == "+" & endR>DT_THRESHOLD,end-(DT_THRESHOLD-startR),start),
@@ -166,6 +190,7 @@ if(nrow(qf)==0){
     #Collapse similar isoforms
     #-------------------------
     #processing
+    message("Collapse similar isoforms")
     collapseds.tab = gtf %>%
     group_by(gene_name) %>%
     group_modify(~{collapseIsoforms(.x, DT_THRESHOLD, DT_EX_THRESHOLD)}) %>%
@@ -180,19 +205,21 @@ if(nrow(qf)==0){
     fwrite(file = paste0(gtf$seqnames[1],"_collapsed_isoforms.txt"), sep="\t", col.names = F, row.names = F)
 
     #collapsing
+    message("collapsing...")
     gtf = left_join(gtf, qf) %>%
     dplyr::filter(!is.na(bulk_TPMperc)) %>%
     group_by(collapsed) %>%
-    mutate(check=ifelse(collapsed!="none",max(bulk_TPMperc),bulk_TPMperc),
+    dplyr::mutate(check=ifelse(collapsed!="none",max(bulk_TPMperc),bulk_TPMperc),
             end=ifelse(strand=="+" & collapsed!="none" & exon_number==1,max(end),end),
             start=ifelse(strand=="-" & collapsed!="none" & exon_number==1,min(start),start)) %>%
     dplyr::filter(bulk_TPMperc==check) %>%
     group_by(collapsed) %>%
-    mutate(endR=ifelse(collapsed!="none" & exon_number==max(exon_number), (startR + (end-start)) - 1, endR)) %>%
+    dplyr::mutate(endR=ifelse(collapsed!="none" & exon_number==max(exon_number), (startR + (end-start)) - 1, endR)) %>%
     ungroup() %>%
     distinct(seqnames,start,end,startR,endR,strand,gene_name,transcript_name,exon_number,bulk_TPMperc,collapsed)
 
     #6) Writing
+    message("writing files...")
     #all exons entries
     fwrite(gtf, file = args$OUTPUT, sep="\t", nThread=1)
 

@@ -38,7 +38,7 @@ gene_counts = reads %>%
   group_by(gene_name) %>%
   summarise(nb.reads = n()) %>%
   data.table()
-gene.quantiles = quantile(gene_counts$nb.reads, seq(0,1,0.01))
+gene.quantiles = stats::quantile(gene_counts$nb.reads, seq(0,1,0.01))
 gene.tokeep = dplyr::filter(gene_counts, nb.reads < gene.quantiles[[QUANTILE_THRESHOLD]])$gene_name
 #filtering
 reads = reads %>%
