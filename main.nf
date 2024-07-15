@@ -273,14 +273,14 @@ workflow {
 
     /* - Reads Preprocessing (B)
     ============================= */
-    reads_processing(samples_paths, annotation_preprocessing.out, "${params.ipdb}")
+    //reads_processing(samples_paths, annotation_preprocessing.out, "${params.ipdb}")
 
     /* isoform quantification (C)
     ============================= */
-    isoform_quantification(reads_processing.out.filtered_reads, reads_processing.out.sample_dge)
+    //isoform_quantification(reads_processing.out.filtered_reads, reads_processing.out.sample_dge)
 
     /* APA characterization (D)
     =========================== */
-    apa_characterization( isoform_quantification.out.flatMap{ it=it[2] }, reads_processing.out.splitted_bams.groupTuple(by: 0))
+    //apa_characterization( isoform_quantification.out.flatMap{ it=it[2] }, reads_processing.out.splitted_bams.groupTuple(by: 0))
 
 }
