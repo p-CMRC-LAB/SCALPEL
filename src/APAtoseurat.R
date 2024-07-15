@@ -18,7 +18,7 @@ MIN.CELLS=3
 MIN.FEATURES=1
 
 #file opening and writing
-read.table(args$APA_PATH, sep="\t", header = T, row.names = 1) %>% 
+utils::read.table(args$APA_PATH, sep="\t", header = T, row.names = 1) %>% 
     Seurat::CreateSeuratObject(names.field = 1, min.cells = MIN.CELLS, min.features = MIN.FEATURES, project = args$sample_name) %>%
     saveRDS(file=paste0(args$sample_name,"_seurat.RDS"))
 
