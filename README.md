@@ -45,14 +45,14 @@ To get a local copy up and running follow these simple example steps.
 ```
 3. Within the CONDA environnement, install the R package Seurat v5
 ```
-> Rscript -e 'remotes::install_github("satijalab/seurat", "seurat5", quiet = TRUE)'
+> Rscript -e 'remotes::install_github("satijalab/seurat", "seurat5", lib = grep("scalpel_conda", .libPaths(), value = TRUE), quiet = TRUE)'
 ```
    
 Another solution (if conda installation takes long) can be to create a Conda environment, install Mamba (faster implementation of Conda) and install the packages using mamba:
 ```sh
 > mamba env create --file SCALPEL/requirements.yml
 > mamba activate scalpel_conda
-> Rscript -e 'remotes::install_github("satijalab/seurat", "seurat5", quiet = TRUE)'
+> Rscript -e 'remotes::install_github("satijalab/seurat", "seurat5", lib = grep("scalpel_conda", .libPaths(), value = TRUE), quiet = TRUE)'
 ```
 
 ## SCALPEL usage
