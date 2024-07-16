@@ -31,6 +31,8 @@ if( ("gene_name" %in% colnames(gtf)) & ("transcript_name" %in% colnames(gtf)) ) 
         dplyr::distinct(seqnames, start, end, width, strand, gene_id, gene_name, transcript_id, transcript_name)
 }
 
+#check1
+if(nrow(gtf)==0){ stop("Error! GTF file contains no 'exon' entries ! Please provide valid GTF file") }
 
 #SAMPLES QUANTIFICATION
 message("Processing bulk quantification sample files...")
@@ -50,8 +52,16 @@ lapply(list.files(path = ".", pattern = "*.sf", full.names = T), function(x){
     #calculate Transcripts bulk % in gene
     dplyr::group_by(gene_name) %>%
     dplyr::reframe(transcript_name, bulk_TPMperc = meanTPM / sum(meanTPM)) %>%
-    arrange(gene_name,transcript_name) %>%
-    data.table::fwrite(file=args$output_path, nThread=1, row.names=F, sep="\t")
+    arrange(gene_name,transcript_name) -> bulk_quants
+
+#writing merge quants
+bulk_quants %>% stats::na.omit() %>% data.table::fwrite(file=args$output_path, nThread=1, row.names=F, sep="\t")
+
+#filtering of GTF
+gtf = dplyr::filter(gtf, gene_name %in% bulk_quants$gene_name) %>% stats::na.omit()
+
+#check2
+if(nrow(gtf)==0){ stop("Error! No gene in the GTF have been bulk quantified by Salmon quant! Please provide valid GTF file") }
 
 #SPLIT GTF by chromosomes
 message("GTF splitting...")
@@ -72,5 +82,7 @@ lapply(split(gtf, gtf$seqnames), function(x){
 
     #writing
     x = distinct(x, seqnames,start,end,width,strand,gene_name,transcript_name)
-    data.table::fwrite(x, file = paste0(x$seqnames[1],".gtf"), sep="\t", nThread=1)
+    if(nrow(x)!=0){ 
+        data.table::fwrite(x, file = paste0(x$seqnames[1],".gtf"), sep="\t", nThread=1)
+    }
 }) -> writeds
