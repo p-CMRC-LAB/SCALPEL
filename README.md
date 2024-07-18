@@ -124,7 +124,7 @@ You can print the Scalpel help documentation by running the following command:
 
         Optional:
         - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp)
-        - transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional, default 30bp)
+        - transcriptomic end distance threshold [--dt_exon_end_threshold] (optional, default 30bp)
         - minimal distance of Ip from isoform 3'ends (optional, default 60bp)
         - params.threads [--threads] (default 30)
         - params.cpus [--cpus] (default 30)
