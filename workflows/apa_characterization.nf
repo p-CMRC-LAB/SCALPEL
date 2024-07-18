@@ -7,7 +7,7 @@
 
 process differential_isoform_usage{
 	tag "${objs}"
-	publishDir "./results/final_results/", overwrite: true, mode: 'copy'
+	publishDir "${params.output}/final_results/", overwrite: true, mode: 'copy'
         label 'big_mem'
 
 	input:
@@ -33,7 +33,7 @@ process differential_isoform_usage{
 
 process generation_filtered_bams{
     tag "${sampleID}"
-    publishDir "./results/final_results/", overwrite: true, mode: 'copy'
+    publishDir "${params.output}/final_results/", overwrite: true, mode: 'copy'
     label 'big_mem'
 
 

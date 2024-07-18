@@ -4,7 +4,7 @@
 
 process probability_distribution {
 	tag "${sample_id}"
-	publishDir "./results/isoform_quantification/fragment_probabilities/${sample_id}", overwrite:'true'
+	publishDir "${params.output}/isoform_quantification/fragment_probabilities/${sample_id}", overwrite:'true'
 	cache true
         label "big_mem"
 
@@ -27,7 +27,7 @@ process probability_distribution {
 
 process fragment_probabilities{
 	tag "${sample_id},${chr}"
-	publishDir "./results/isoform_quantification/fragment_probabilities/${sample_id}", overwrite: true, mode: 'copy'
+	publishDir "${params.output}/isoform_quantification/fragment_probabilities/${sample_id}", overwrite: true, mode: 'copy'
 	cache true
         label "big_mem"
 
@@ -84,7 +84,7 @@ process em_algorithm{
 
 process cells_merging{
 	tag "${sample_id}"
-	publishDir "./results/isoform_quantification/fragment_probabilities/${sample_id}", overwrite: true
+	publishDir "${params.output}/isoform_quantification/fragment_probabilities/${sample_id}", overwrite: true
 	cache true
         label "big_mem"
 
@@ -103,7 +103,7 @@ process cells_merging{
 
 process dge_generation{
 	tag "${sample_id}, ${isoforms}, ${raw_dge}"
-	publishDir "./results/final_results/${sample_id}", overwrite: true
+	publishDir "${params.output}/final_results/${sample_id}", overwrite: true
 	cache true
         label "big_mem"
 

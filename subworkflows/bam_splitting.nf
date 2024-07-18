@@ -5,7 +5,7 @@
 
 process bam_splitting {
         tag "${sample_id}, ${chr}, ${bc_path}"
-        publishDir "./results/reads_processing/bam_splitting/${sample_id}"
+        publishDir "${params.output}/reads_processing/bam_splitting/${sample_id}"
         cache true
         label 'small_mem'
 

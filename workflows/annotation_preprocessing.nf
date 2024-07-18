@@ -6,7 +6,7 @@ Loading of ANNOTATION data & preprocessing
 */
 
 process salmon_transcriptome_indexing{
-    publishDir "./results/annotation_processing/salmon_indexing", overwrite: true
+    publishDir "${params.output}/annotation_processing/salmon_indexing", overwrite: true
     cache true
     label 'big_mem'
 
@@ -23,7 +23,7 @@ process salmon_transcriptome_indexing{
 
 process salmon_bulk_quantification{
     tag "${pair_id}, ${fastq1}, ${fastq2}"
-    publishDir "./results/annotation_processing/salmon_bulk_quantification", overwrite: true
+    publishDir "${params.output}/annotation_processing/salmon_bulk_quantification", overwrite: true
     cache true
     label 'big_mem'
 
@@ -43,7 +43,7 @@ process salmon_bulk_quantification{
 
 process tpm_counts_average{
     tag "${bulk_quants}"
-    publishDir "./results/annotation_processing/salmon_bulk_quantification", overwrite: true
+    publishDir "${params.output}/annotation_processing/salmon_bulk_quantification", overwrite: true
     cache true
     label "small_mem"
 
@@ -61,7 +61,7 @@ process tpm_counts_average{
 
 process isoform_selection_weighting{
     tag "${gtf.baseName}, ${merged_quants}"
-    publishDir "./results/annotation_processing/isoform_processing", overwrite: true, mode: 'copy'
+    publishDir "${params.output}/annotation_processing/isoform_processing", overwrite: true, mode: 'copy'
     cache true
     label "small_mem"
 

@@ -5,7 +5,7 @@
 
 process read_10Xrepo{
 	tag "${sample_id}"
-	publishDir "./results/sample_files/", overwrite: true
+	publishDir "${params.output}/sample_files/", overwrite: true
 	cache true
         label 'small_mem'
 

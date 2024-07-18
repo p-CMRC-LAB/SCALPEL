@@ -75,6 +75,7 @@ if( params.help != null )
         - minimal distance of internal priming sites (IP) from isoform 3'ends [--ip_threshold] (optional, 60nuc): ${params.ip_threshold}
         - gene fraction abundance threshold [--gene_fraction] (optional, default '98%'): ${params.gene_fraction}
         - binsize threshold for transcriptomic distance based probability [--binsize] (optional, default '20): ${params.binsize}
+        - output directory for the Nextflow workflow [--output] (optional, default './results'): ${params.output}
         - reads subsampling threshold [--subsample] (optional, default 1): ${params.subsample}
 
     """.stripIndent())
@@ -132,6 +133,7 @@ log.info """\
         - minimal distance of internal priming sites (IP) from isoform 3'ends [--ip_threshold] (optional, 60nuc): ${params.ip_threshold}
         - gene fraction abundance threshold [--gene_fraction] (optional, default '98%'): ${params.gene_fraction}
         - binsize threshold for transcriptomic distance based probability [--binsize] (optional, default '20): ${params.binsize}
+        - output directory for the Nextflow workflow [--output] (optional, default './results'): ${params.output}
         - reads subsampling threshold [--subsample] (optional, default 1): ${params.subsample}
 
 """.stripIndent()
