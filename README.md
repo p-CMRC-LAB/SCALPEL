@@ -99,35 +99,37 @@ You can print the Scalpel help documentation by running the following command:
 ```
 > nextflow run -resume SCALPEL/main.nf --help
 
-	SCALPEL - NF  P I P E L I N E
-	===============================
+===============================
+SCALPEL - N F   P I P E L I N E
+===============================
+Author: PLASS Lab ; Franz AKE
+*****************
+P-CMRC - Barcelona, SPAIN
 
-	Execution:
-	Ex: nextflow run -resume scalpel.nf --sequencing <Sequencing type>
-	 --samples <SAMPLE files folder path>
-	 --reads <FASTQs files folder path> --transcriptome <FASTA transcriptome reference path>
-	 --annot <GTF annotation file path> --ipdb <Internal priming annotation file> 
-	
-	Input files:
-    - Annotation required files(required):
-        - transcriptome reference [--transcriptome]
-        - annotation GTF reference [--gtf]
-        - internal priming annotation [--ipdb]
-      
-    - Reads processing files (required):
-        - samples files [--samples]
-        - fastqs files [--reads]
-    
-    - Params:
-        Required:
-        - sequencing type (required): ${params.sequencing}
+input files:
+- Annotation required files(required):
+    - transcriptome reference [--transcriptome]: null
+    - annotation GTF reference [--gtf]: null
+    - internal priming annotation [--ipdb]: null
 
-        Optional:
-        - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp)
-        - transcriptomic end distance threhsold [--dt_exon_end_threshold] (optional, default 30bp)
-        - minimal distance of Ip from isoform 3'ends (optional, default 60bp)
-        - params.threads [--threads] (default 30)
-        - params.cpus [--cpus] (default 30)
+
+- Reads processing files (required):
+    - samplesheet [--samplesheet]: null
+
+- Params:
+    Required:
+    - sequencing type (required): null
+
+    Optional:
+    - barcodes whitelist [--barcodes] (optional): null
+    - cell clusters annotation [--clusters] (optional): null
+    - transcriptomic distance threshold [--dt_threshold] (optional, default 600bp): 600
+    - transcriptomic end distance threhsold [--de_threshold] (optional, default 30bp): 30
+    - minimal distance of internal priming sites (IP) from isoform 3'ends [--ip_threshold] (optional, 60nuc): 60
+    - gene fraction abundance threshold [--gene_fraction] (optional, default '98%'): 98%
+    - binsize threshold for transcriptomic distance based probability [--binsize] (optional, default '20): 20
+    - output directory for the Nextflow workflow [--output] (optional, default './results'): ./results
+    - reads subsampling threshold [--subsample] (optional, default 1): 1
 ```
 - All the computational ressource required for the execution by Nextflow can be defined within the _**SCALPEL/nextflow.config**_ file:
 ```
