@@ -36,23 +36,18 @@ To get a local copy up and running follow these simple example steps.
 
 1. Clone the repo and enter in the folder
 ```sh
-> git clone https://github.com/p-CMRC-LAB/SCALPEL.git
+git clone https://github.com/p-CMRC-LAB/SCALPEL.git
 ```
 2. Install the required packages using the requirement.txt file in the SCALPEL folder
 ```sh
-> CONDA_CHANNEL_PRIORITY=flexible conda env create -f SCALPEL/requirements.yml
-> conda activate scalpel_conda
-```
-3. Within the CONDA environnement, install the R package Seurat v5
-```
-> Rscript -e 'remotes::install_github("satijalab/seurat", "seurat5", lib = grep("scalpel_conda", .libPaths(), value = TRUE), quiet = TRUE)'
+CONDA_CHANNEL_PRIORITY=flexible conda env create -f SCALPEL/requirements.yml
+conda activate scalpelEnv
 ```
    
 Another solution (if conda installation takes long) can be to create a Conda environment, install Mamba (faster implementation of Conda) and install the packages using mamba:
 ```sh
-> mamba env create --file SCALPEL/requirements.yml
-> mamba activate scalpel_conda
-> Rscript -e 'remotes::install_github("satijalab/seurat", "seurat5", lib = grep("scalpel_conda", .libPaths(), value = TRUE), quiet = TRUE)'
+mamba env create --file SCALPEL/requirements.yml
+mamba activate scalpel_conda
 ```
 
 ## SCALPEL usage
@@ -68,7 +63,7 @@ For running, SCALPEL requires to provide specific input files path & parameters:
   1.  Required, **[\-\-samplesheet]**: Provide within a  **CSV**  (ex: samplesheet.csv) file the following paths : \
     -(In case of 10X based scRNA-seq sample [--sequencing  **chromium**]:
 ```sh
-<SAMPLE_NAME>,<FASTQ1_FILE_PATH>,<FASTQ2_FILE_PATH>,<10X_CELLRANGER_REPOSITORY_PATH>
+<SAMPLE_CELLRANGER_REPOSITORY_NAME>,<FASTQ1_FILE_PATH>,<FASTQ2_FILE_PATH>,<10X_CELLRANGER_REPOSITORY_PATH>
 ```
 or DropSeq based scRNA-seq sample [--sequencing  **dropseq**]):
 ```sh
@@ -195,7 +190,7 @@ SRR6129051  AAACGGGTCATTTGGG-1  ES
 
 3. **Running**
 ```sh
-> nextflow run -resume SCALPEL/main.nf \
+nextflow run -resume SCALPEL/main.nf \
     --sequencing chromium \
     --samplesheet samplesheet.csv \
     --transcriptome gencode.vM10.transcripts.fa \
@@ -204,6 +199,15 @@ SRR6129051  AAACGGGTCATTTGGG-1  ES
     --barcodes barcodes_whitelist.csv \ (Optional)
     --clusters clusters.txt \ (Optional)
 ```
+
+
+(**Optional**), In case of memory error issue in the execution of SCALPEL using SLURM executor on HPC, it can be run within an interactive session using srun with a 'local' executor:
+```sh
+srun --pty --mincpus XX --mem XX bash
+```
+
+
+
 
 ## Results
 
