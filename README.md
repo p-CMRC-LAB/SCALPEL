@@ -47,7 +47,7 @@ conda activate scalpelEnv
 Another solution (if conda installation takes long) can be to create a Conda environment, install Mamba (faster implementation of Conda) and install the packages using mamba:
 ```sh
 mamba env create --file SCALPEL/requirements.yml
-mamba activate scalpel_conda
+mamba activate scalpelEnv
 ```
 
 ## SCALPEL usage
