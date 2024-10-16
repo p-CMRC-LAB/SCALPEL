@@ -54,38 +54,20 @@ process bam_splitting {
                     fi
                 """
         else if( params.sequencing == "chromium" )
-            if ( params.barcodes != null )
-                """
-                    #Chromium_seq
-                    #============
-                    #Filter reads , Remove duuplicates and split by chromosome
-                    samtools view --subsample ${params.subsample} -b ${bam} ${chr} -D CB:${bc_path} --keep-tag "CB,UB" | samtools sort > tmp.bam
-                    #Remove all PCR duplicates ...
-                    samtools markdup tmp.bam ${chr}.bam -r --barcode-tag CB --barcode-tag UB
-                    #delete all empty files ...
-                    rm tmp.bam
-                    samtools view ${chr}.bam | head -2 > check
-                    if [ -s check ]; then
-                        echo "ok"
-                    else
-                        rm -f ${chr}.bam
-                    fi
-                """
+        """
+            #Chromium_seq
+            #============
+            #Filter reads , Remove duuplicates and split by chromosome
+            samtools view --subsample ${params.subsample} -b ${bam} ${chr} -D CB:${bc_path} --keep-tag "CB,UB" | samtools sort > tmp.bam
+            #Remove all PCR duplicates ...
+            samtools markdup tmp.bam ${chr}.bam -r --barcode-tag CB --barcode-tag UB
+            #delete all empty files ...
+            rm tmp.bam
+            samtools view ${chr}.bam | head -2 > check
+            if [ -s check ]; then
+                echo "ok"
             else
-                """
-                    #Chromium_seq
-                    #============
-                    #Filter reads , Remove duuplicates and split by chromosome
-                    samtools view --subsample ${params.subsample} -b ${bam} ${chr} --keep-tag "CB,UB" | samtools sort > tmp.bam
-                    #Remove all PCR duplicates ...
-                    samtools markdup tmp.bam ${chr}.bam -r --barcode-tag CB --barcode-tag UB
-                    #delete all empty files ...
-                    rm tmp.bam
-                    samtools view ${chr}.bam | head -2 > check
-                    if [ -s check ]; then
-                        echo "ok"
-                    else
-                        rm -f ${chr}.bam
-                    fi
-                """
+                rm -f ${chr}.bam
+            fi
+        """
 }

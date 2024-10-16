@@ -33,7 +33,7 @@ reads = dplyr::filter(reads, probs_bin!=0)
 reads = reads %>% dplyr::distinct(start.rd,end.rd,frag.id,gene_name,transcript_name,bulk_TPMperc,probs_bin)
 
 #splitting
-reads = reads %>% tidyr::separate(frag.id, into = c("bc","umi"), sep="::")
+reads = reads %>% tidyr::separate(frag.id, into = c("bc","umi"), sep="::") %>% na.omit()
 
 #3. Grouping
 #+++++++++++

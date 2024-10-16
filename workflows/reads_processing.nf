@@ -30,11 +30,11 @@ workflow samples_loading {
             read_10Xrepo(samples_paths.map{ it=tuple(it[0], it[3]) })
 
             /* formatting */
-            read_10Xrepo.out.map{ it = tuple( it[0], file(it[1]), file(it[2]), file(it[4]) ) }.set{ samples_selects }
+            read_10Xrepo.out.map{ it = tuple( it[0], file(it[1]), file(it[2]), file(it[4]), file(it[3]) ) }.set{ samples_selects }
 
         } else if ( "${params.sequencing}" == "dropseq") {
 
-            samples_paths.map{ it = tuple( it[0], file(it[3]), file(it[4]), file(it[5]) ) }.set{ samples_selects }
+            samples_paths.map{ it = tuple( it[0], file(it[3]), file(it[4]), file(it[5]), null ) }.set{ samples_selects }
 
         } else
             error( "Incoherency in [--sequencing] args !!" )
@@ -43,12 +43,11 @@ workflow samples_loading {
             /* parse barcodes file */
             ( Channel.fromPath(params.barcodes) | splitCsv(header:false) ).set{ barcodes_paths }
             (samples_selects.join(barcodes_paths, by:[0])).set{ samples_selects }
-            selected_isoforms.flatMap { it = it[0] }.combine(samples_selects).set{ samples_selects }
+            selected_isoforms.flatMap { it = it[0] }.combine(samples_selects).set{ samples_selects_tmp }
+            samples_selects_tmp.map{ it = tuple(it[0], it[1], it[2], it[3], it[4], it[5]) }.set{ samples_selects }
 
         } else {
-
-            selected_isoforms.flatMap { it = it[0] }.combine(samples_selects.map{ it = tuple(it[0], it[1], it[2], it[3], null) }).set{ samples_selects }
-
+            selected_isoforms.flatMap { it = it[0] }.combine(samples_selects.map{ it = tuple(it[0], it[1], it[2], it[3], it[4]) }).set{ samples_selects }
         }
 
         /* processing of input BAM file... */
